@@ -73,7 +73,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     if (!cleanMatricula) return;
 
     setIsSearching(true);
-    setHasSearched(true);
+    setHasSearched(false);
     setBiometricFeedback(null);
 
     try {
@@ -85,6 +85,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
           nome: firestoreColab.nome,
           cargo: firestoreColab.cargo,
         });
+        setHasSearched(true);
         setIsSearching(false);
         return;
       }
@@ -95,6 +96,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     // 2. Fallback para base local cadastrada
     const found = findColaboradorByMatricula(cleanMatricula);
     setSearchedColaborador(found || null);
+    setHasSearched(true);
     setIsSearching(false);
   };
 
@@ -175,7 +177,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     }
   };
 
-  const isNotFound = hasSearched && !searchedColaborador && matricula.trim().length > 0;
+  const isNotFound = hasSearched && !isSearching && !searchedColaborador && matricula.trim().length > 0;
 
   return (
     <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 shadow-[0_4px_24px_rgba(32,59,139,0.12)] dark:shadow-[0_4px_28px_rgba(0,0,0,0.5)] border-[3px] border-primary/20 dark:border-[#252836] p-4 sm:p-5 flex-1 min-h-0 max-h-[580px] justify-between">
@@ -198,8 +200,8 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
         </h2>
         <p className="text-xs text-on-surface-variant dark:text-[#94a3b8] mt-0.5 max-w-sm">
           {isMobile 
-            ? 'Informe sua matrícula de 8 dígitos ou use o acesso biométrico.' 
-            : 'Informe sua matrícula funcional de 8 dígitos para iniciar.'}
+            ? 'Informe sua matrícula ou use o acesso biométrico.' 
+            : 'Informe sua matrícula funcional para iniciar.'}
         </p>
       </div>
 
@@ -242,8 +244,8 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
 
         {/* Campo Matrícula em Cima com Botão Buscar Embaixo */}
         <div className="w-full flex flex-col items-center">
-          <label className="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-on-surface-variant dark:text-[#94a3b8] mb-1 text-center">
-            Matrícula Funcional (8 Dígitos)
+          <label className="block text-xs sm:text-sm font-semibold uppercase tracking-wider text-on-surface-variant dark:text-[#94a3b8] mb-1 text-center">
+            Matrícula
           </label>
 
           <form onSubmit={handleSearchOrSubmit} className="w-full flex flex-col items-center gap-2">
@@ -362,19 +364,19 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
       </div>
 
       {/* Botão de Ação / Iniciar Checklist */}
-      <div className="shrink-0 pt-2 border-t border-outline-variant/30 dark:border-[#252836]">
+      <div className="shrink-0 pt-2 border-t border-outline-variant/30 dark:border-[#252836] flex justify-center w-full">
         <button
           type="button"
           onClick={handleProceed}
           disabled={!searchedColaborador}
-          className={`w-full py-3 sm:py-3.5 px-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all duration-200 shadow-md ${
+          className={`w-full max-w-[260px] py-2.5 sm:py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-md ${
             searchedColaborador
               ? 'bg-[#0080ff] hover:bg-[#0070e0] active:scale-98 text-white cursor-pointer hover:shadow-lg'
               : 'bg-gray-200 dark:bg-[#252836] text-gray-400 dark:text-gray-500 cursor-not-allowed border border-transparent'
           }`}
         >
-          <span>Iniciar Checklist de Prontidão</span>
-          <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
+          <span>Iniciar Checklist</span>
+          <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
         </button>
       </div>
 
