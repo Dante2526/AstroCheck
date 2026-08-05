@@ -37,8 +37,8 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
             <span className="material-symbols-outlined text-[20px]">check</span>
           </div>
           <img 
-            src="/100000. de 2026, 16_27_57.webp" 
-            alt="Astronauta Comemorando" 
+            src="/astronaut_confortavel.webp" 
+            alt="Astronauta Confiante e Apto" 
             className="w-full h-full object-contain drop-shadow"
           />
         </div>

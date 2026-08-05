@@ -86,9 +86,11 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="color-scheme" content="light dark">
+      <meta name="supported-color-schemes" content="light dark">
       <title>Relatório AstroCheck - ${turmaConfig.label}</title>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 24px 12px;">
         <tr>
           <td align="center">
@@ -96,25 +98,31 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
               
               <!-- Header Gradient -->
               <tr>
-                <td style="background: linear-gradient(135deg, #0b1528 0%, #151e33 100%); padding: 24px 28px; text-align: center; border-bottom: 3px solid ${turmaConfig.color};">
+                <td style="background: linear-gradient(135deg, #0b1528 0%, #151e33 100%); padding: 26px 28px; text-align: center; border-bottom: 3px solid ${turmaConfig.color};">
                   <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span style="font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">AstroCheck</span>
-                    <span style="background: #22c55e; color: #ffffff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; vertical-align: middle;">ONLINE</span>
+                    <span style="font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; vertical-align: middle;">AstroCheck</span>
+                    <span style="display: inline-block; vertical-align: middle; line-height: 1;" title="Verificado AstroCheck">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; filter: drop-shadow(0 2px 5px rgba(34,197,94,0.5));">
+                        <path d="M12 2L4 5.5V11.5C4 16.5 7.4 21.2 12 22.5C16.6 21.2 20 16.5 20 11.5V5.5L12 2Z" fill="#22c55e" />
+                        <path d="M12 3.2L5.2 6.2V11.5C5.2 15.8 8.1 19.9 12 21.1C15.9 19.9 18.8 15.8 18.8 11.5V6.2L12 3.2Z" stroke="rgba(255,255,255,0.4)" stroke-width="0.8" />
+                        <path d="M8.2 11.8L10.8 14.4L15.8 9.4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </span>
                   </div>
-                  <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">
-                    Checklist de Prontidão Operacional & Segurança
+                  <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500; letter-spacing: 0.2px;">
+                    Checklist de Prontidão Operacional &amp; Segurança
                   </p>
                 </td>
               </tr>
 
               <!-- Status Banner -->
               <tr>
-                <td style="padding: 20px 28px 10px 28px;">
+                <td style="padding: 20px 28px 12px 28px;">
                   <div style="background-color: ${statusBg}; border: 1px solid ${statusBorder}; border-radius: 12px; padding: 16px; text-align: center;">
                     <span style="font-size: 16px; font-weight: 800; color: ${statusColor}; letter-spacing: 0.3px; display: block;">
                       ${statusText}
                     </span>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #4b5563;">
+                    <p style="margin: 4px 0 0 0; font-size: 12.5px; color: #374151; line-height: 1.4;">
                       ${isFullApto ? 'O colaborador declarou estar 100% apto e em condições seguras para a jornada.' : 'Atenção necessária: Respostas indicam desvios nos itens de segurança/saúde.'}
                     </p>
                   </div>
@@ -123,26 +131,22 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
 
               <!-- Detalhes do Registro -->
               <tr>
-                <td style="padding: 10px 28px 16px 28px;">
-                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 16px;">
+                <td style="padding: 6px 28px 18px 28px;">
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
                     <tr>
-                      <td style="padding: 6px 12px; font-size: 13px; color: #64748b; width: 40%;"><strong>Turma / Turno:</strong></td>
-                      <td style="padding: 6px 12px; font-size: 14px; font-weight: bold; color: #0f172a;">
+                      <td style="padding: 10px 16px; font-size: 13px; color: #64748b; width: 35%; font-weight: 600;">Turma / Turno:</td>
+                      <td style="padding: 10px 16px; font-size: 14px; font-weight: 700; color: #0f172a;">
                         <span style="color: ${turmaConfig.color};">${turmaConfig.label}</span> (${turmaConfig.turno} — ${turmaConfig.horario})
                       </td>
                     </tr>
                     <tr>
-                      <td style="padding: 6px 12px; font-size: 13px; color: #64748b;"><strong>Gestor Destinatário:</strong></td>
-                      <td style="padding: 6px 12px; font-size: 13px; color: #0f172a;">${turmaConfig.gestorNome} (${turmaConfig.gestorEmail})</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 6px 12px; font-size: 13px; color: #64748b;"><strong>Data e Horário:</strong></td>
-                      <td style="padding: 6px 12px; font-size: 13px; color: #0f172a;">${dateFormatted}</td>
+                      <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-top: 1px solid #edf2f7;">Data e Horário:</td>
+                      <td style="padding: 10px 16px; font-size: 13px; font-weight: 600; color: #0f172a; border-top: 1px solid #edf2f7;">${dateFormatted}</td>
                     </tr>
                     ${data.colaboradorNome ? `
                     <tr>
-                      <td style="padding: 6px 12px; font-size: 13px; color: #64748b;"><strong>Colaborador:</strong></td>
-                      <td style="padding: 6px 12px; font-size: 13px; font-weight: bold; color: #0f172a;">${escapeHtml(data.colaboradorNome)}</td>
+                      <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-top: 1px solid #edf2f7;">Colaborador:</td>
+                      <td style="padding: 10px 16px; font-size: 13px; font-weight: 700; color: #0f172a; border-top: 1px solid #edf2f7;">${escapeHtml(data.colaboradorNome)}</td>
                     </tr>
                     ` : ''}
                   </table>
