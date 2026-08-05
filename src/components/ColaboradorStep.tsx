@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Colaborador, findColaboradorByMatricula } from '../config/colaboradores';
+import { findColaboradorInFirestore } from '../services/firebase';
 
 interface ColaboradorStepProps {
   onConfirm: (colaborador: { matricula: string; nome: string; cargo?: string }) => void;
@@ -66,7 +67,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     setBiometricFeedback(null);
   };
 
-  const handleSearchOrSubmit = (e?: React.FormEvent) => {
+  const handleSearchOrSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanMatricula = matricula.trim();
     if (!cleanMatricula) return;
@@ -75,11 +76,26 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     setHasSearched(true);
     setBiometricFeedback(null);
 
-    setTimeout(() => {
-      const found = findColaboradorByMatricula(cleanMatricula);
-      setSearchedColaborador(found || null);
-      setIsSearching(false);
-    }, 180);
+    try {
+      // 1. Busca no Firestore em tempo real nas coleções das turmas
+      const firestoreColab = await findColaboradorInFirestore(cleanMatricula);
+      if (firestoreColab) {
+        setSearchedColaborador({
+          matricula: firestoreColab.matricula,
+          nome: firestoreColab.nome,
+          cargo: firestoreColab.cargo,
+        });
+        setIsSearching(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('[AstroCheck] Erro na busca remota:', err);
+    }
+
+    // 2. Fallback para base local cadastrada
+    const found = findColaboradorByMatricula(cleanMatricula);
+    setSearchedColaborador(found || null);
+    setIsSearching(false);
   };
 
   // Vincular biometria (Digital ou Facial) em dispositivos móveis
@@ -113,18 +129,40 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
   };
 
   // Executar Acesso Rápido por Biometria / Facial
-  const handleQuickScan = (type: 'fingerprint' | 'face', targetMatricula: string) => {
+  const handleQuickScan = async (type: 'fingerprint' | 'face', targetMatricula: string) => {
     setIsScanning(type);
 
-    setTimeout(() => {
-      const found = findColaboradorByMatricula(targetMatricula);
-      if (found) {
-        setMatricula(found.matricula);
-        setSearchedColaborador(found);
+    try {
+      const firestoreColab = await findColaboradorInFirestore(targetMatricula);
+      if (firestoreColab) {
+        setMatricula(firestoreColab.matricula);
+        setSearchedColaborador({
+          matricula: firestoreColab.matricula,
+          nome: firestoreColab.nome,
+          cargo: firestoreColab.cargo,
+        });
         setHasSearched(true);
+        setIsScanning(null);
+        return;
       }
-      setIsScanning(null);
-    }, 600);
+    } catch {
+      // continua para o fallback
+    }
+
+    const found = findColaboradorByMatricula(targetMatricula);
+    if (found) {
+      setMatricula(found.matricula);
+      setSearchedColaborador(found);
+      setHasSearched(true);
+    } else if (savedBiometric) {
+      setMatricula(savedBiometric.matricula);
+      setSearchedColaborador({
+        matricula: savedBiometric.matricula,
+        nome: savedBiometric.nome,
+      });
+      setHasSearched(true);
+    }
+    setIsScanning(null);
   };
 
   const handleProceed = () => {
