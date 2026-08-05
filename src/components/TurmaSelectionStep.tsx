@@ -12,6 +12,7 @@ export interface TurmaSelectionStepProps {
   onReset: () => void;
   totalRisks: number;
   isDarkMode: boolean;
+  colaborador?: { matricula: string; nome: string; cargo?: string } | null;
 }
 
 export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
@@ -24,6 +25,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
   onReset,
   totalRisks,
   isDarkMode,
+  colaborador,
 }) => {
   // Tela de Sucesso
   if (isSuccess && selectedTurma) {
@@ -116,6 +118,19 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
             Escolha sua Turma Operacional
           </h2>
         </div>
+        {colaborador && (
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-low dark:bg-[#171922] border border-outline-variant/40 dark:border-[#2d3139] text-right">
+            <span className="material-symbols-outlined text-[16px] text-primary dark:text-[#0080ff]">badge</span>
+            <div className="text-[11px]">
+              <div className="font-bold text-on-surface dark:text-[#f7fafc] truncate max-w-[120px]">
+                {colaborador.nome.split(' ')[0]}
+              </div>
+              <div className="text-on-surface-variant dark:text-[#94a3b8] text-[10px]">
+                Mat: {colaborador.matricula}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Grid de Seleção das 4 Turmas */}

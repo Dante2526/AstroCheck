@@ -21,6 +21,8 @@ export interface ReadinessReportData {
   totalRisks: number;
   timestamp: string;
   colaboradorNome?: string;
+  colaboradorMatricula?: string;
+  colaboradorCargo?: string;
 }
 
 /**
@@ -146,7 +148,11 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
                     ${data.colaboradorNome ? `
                     <tr>
                       <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-top: 1px solid #edf2f7;">Colaborador:</td>
-                      <td style="padding: 10px 16px; font-size: 13px; font-weight: 700; color: #0f172a; border-top: 1px solid #edf2f7;">${escapeHtml(data.colaboradorNome)}</td>
+                      <td style="padding: 10px 16px; font-size: 13px; font-weight: 700; color: #0f172a; border-top: 1px solid #edf2f7;">
+                        ${escapeHtml(data.colaboradorNome)}
+                        ${data.colaboradorMatricula ? `<span style="font-weight: 600; color: #0080ff; font-size: 12px; margin-left: 6px;">(Mat: ${escapeHtml(data.colaboradorMatricula)})</span>` : ''}
+                        ${data.colaboradorCargo ? `<div style="font-size: 11.5px; color: #64748b; font-weight: 500; margin-top: 2px;">${escapeHtml(data.colaboradorCargo)}</div>` : ''}
+                      </td>
                     </tr>
                     ` : ''}
                   </table>

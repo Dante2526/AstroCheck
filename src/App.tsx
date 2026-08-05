@@ -7,8 +7,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { BB8Toggle } from './components/BB8Toggle';
 import { TurmaSelectionStep } from './components/TurmaSelectionStep';
+import { ColaboradorStep } from './components/ColaboradorStep';
 import { TurmaKey, TURMAS } from './config/turmas';
 import { sendReadinessEmail, ReadinessAnswerItem, ReadinessReportData } from './services/emailService';
+import { saveChecklistToFirestore } from './services/firebase';
 
 const LocomotiveSide = React.memo(({ size = 32 }: { size?: number }) => {
   const width = size * 1.5; // Torna a locomotiva 50% mais larga proporcionalmente à altura
@@ -143,6 +145,17 @@ export default function App() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isEmailSuccess, setIsEmailSuccess] = useState(false);
 
+  // Estado do Colaborador (identificação por matrícula)
+  const [colaborador, setColaborador] = useState<{ matricula: string; nome: string; cargo?: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem('astrocheck_colaborador');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isColaboradorStep, setIsColaboradorStep] = useState<boolean>(true);
+
   const [answers, setAnswers] = useState<Record<number, 'yes' | 'no' | null>>({
     1: 'yes',
     2: 'no',
@@ -189,6 +202,8 @@ export default function App() {
     const imagesToPreload = [
       ...questions.map(q => q.image),
       '/100000. de 2026, 16_27_57.webp',
+      '/astronaut_confortavel.webp',
+      '/file_0000000059b0820e9a6113802390edd4.webp',
     ];
     imagesToPreload.forEach(src => {
       const img = new Image();
@@ -217,6 +232,16 @@ export default function App() {
     return { totalRisks: risks, readinessAnswers: compiled };
   }, [answers]);
 
+  const handleConfirmColaborador = (colab: { matricula: string; nome: string; cargo?: string }) => {
+    setColaborador(colab);
+    try {
+      localStorage.setItem('astrocheck_colaborador', JSON.stringify(colab));
+    } catch (e) {
+      console.warn('[AstroCheck] Erro ao persistir colaborador:', e);
+    }
+    setIsColaboradorStep(false);
+  };
+
   const handleNext = () => {
     if (currentStep < questions.length) {
       setCurrentStep(currentStep + 1);
@@ -230,6 +255,8 @@ export default function App() {
       setIsTurmaStep(false);
     } else if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+    } else if (currentStep === 1) {
+      setIsColaboradorStep(true);
     }
   };
 
@@ -251,9 +278,15 @@ export default function App() {
       answers: readinessAnswers,
       totalRisks,
       timestamp: new Date().toISOString(),
+      colaboradorNome: colaborador?.nome,
+      colaboradorMatricula: colaborador?.matricula,
+      colaboradorCargo: colaborador?.cargo,
     };
 
-    const result = await sendReadinessEmail(reportData);
+    const [result] = await Promise.all([
+      sendReadinessEmail(reportData),
+      saveChecklistToFirestore(reportData),
+    ]);
     setIsSendingEmail(false);
 
     if (result.success) {
@@ -280,6 +313,7 @@ export default function App() {
     setSelectedTurma(null);
     setIsEmailSuccess(false);
     setIsSendingEmail(false);
+    setIsColaboradorStep(true);
   };
 
   const handleToggleDarkMode = useCallback((e?: any) => {
@@ -348,16 +382,39 @@ export default function App() {
 
   const isYesSafe = question?.safeAnswer === 'yes';
   
-  // Percentual da ferrovia: se estiver na etapa de turma, avança para 100%
-  const progressPercent = isTurmaStep ? 100 : ((currentStep - 1) / (questions.length - 1)) * 100;
+  // Percentual da ferrovia: se estiver na identificação = 0%, se turma = 100%, senão escala de 1 a 9
+  const progressPercent = isColaboradorStep 
+    ? 0 
+    : isTurmaStep 
+      ? 100 
+      : ((currentStep - 1) / (questions.length - 1)) * 100;
 
   return (
     <div className="bg-surface-tint-light dark:bg-[#111217] h-dvh max-h-dvh flex flex-col font-body-md text-on-surface dark:text-[#f7fafc] overflow-hidden select-none transition-colors duration-300">
       {/* TopAppBar */}
       <header className="bg-surface dark:bg-[#15171E] border-b border-transparent dark:border-[#252836] shadow-sm shrink-0 z-40 transition-colors duration-300">
         <div className="relative flex justify-between items-center px-4 pt-2.5 pb-1 sm:pt-3 sm:pb-1.5 w-full max-w-2xl mx-auto min-h-[48px] sm:min-h-[52px]">
-          {/* Espaço reservado para manter o balanceamento do flex */}
-          <div className="flex items-center z-10 w-8 sm:w-10">
+          {/* Lado Esquerdo: Chip de Tripulante Ativo ou Espaço */}
+          <div className="flex items-center z-10">
+            {colaborador && !isColaboradorStep ? (
+              <button 
+                type="button" 
+                onClick={() => setIsColaboradorStep(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-low dark:bg-[#1E2029] border border-outline-variant/40 dark:border-[#2d3139] hover:border-primary dark:hover:border-[#0080ff] transition-all text-xs font-semibold text-on-surface dark:text-[#f7fafc] cursor-pointer max-w-[140px] sm:max-w-[180px] shadow-2xs"
+                title="Clique para alterar o colaborador"
+              >
+                <span className="material-symbols-outlined text-[14px] text-[#0080ff] shrink-0">badge</span>
+                <span className="truncate">
+                  {(() => {
+                    const parts = colaborador.nome.trim().split(/\s+/);
+                    return parts.length > 1 ? `${parts[0]} ${parts[1]}` : parts[0];
+                  })()}
+                </span>
+                <span className="material-symbols-outlined text-[10px] text-on-surface-variant/70 dark:text-[#94a3b8]/70 shrink-0 ml-0.5">edit</span>
+              </button>
+            ) : (
+              <div className="w-8 sm:w-10"></div>
+            )}
           </div>
           
           {/* Título AstroCheck + Escudo + Passo (100% Centralizado matematicamente) */}
@@ -407,7 +464,9 @@ export default function App() {
               </span>
             </h1>
             <span className="text-[11px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] font-medium transition-colors duration-300 block">
-              {isTurmaStep ? (
+              {isColaboradorStep ? (
+                <span className="text-[#0080ff] dark:text-[#0080ff] font-bold">Identificação de Tripulante</span>
+              ) : isTurmaStep ? (
                 <span className="text-[#ff6b00] dark:text-[#ff7a00] font-bold">Etapa Final &bull; Seleção de Turma</span>
               ) : (
                 `Passo ${currentStep} de ${questions.length}`
@@ -427,7 +486,7 @@ export default function App() {
         </div>
 
         {/* Railway Progress Bar with Locomotive & Clean Transparent Milestones */}
-        <div className="w-full max-w-2xl mx-auto px-5 pb-2.5 pt-4 sm:pt-5 relative">
+        <div className="w-full max-w-2xl mx-auto px-5 pb-2 pt-6 sm:pt-7 relative">
           <div className="relative w-full h-1.5 sm:h-2 bg-surface-container-highest/70 dark:bg-[#252836] rounded-full">
             {/* Fill Progress Bar */}
             <div 
@@ -438,8 +497,8 @@ export default function App() {
             {/* 9 Clean Transparent Milestone Dots (Marcos) */}
             <div className="absolute inset-0 pointer-events-none">
               {questions.map((q, idx) => {
-                const isPassed = isTurmaStep || currentStep > idx + 1;
-                const isCurrent = !isTurmaStep && currentStep === idx + 1;
+                const isPassed = !isColaboradorStep && (isTurmaStep || currentStep > idx + 1);
+                const isCurrent = !isColaboradorStep && !isTurmaStep && currentStep === idx + 1;
                 const dotPercent = (idx / (questions.length - 1)) * 100;
                 return (
                   <div 
@@ -459,10 +518,10 @@ export default function App() {
 
             {/* Locomotive advancing smoothly */}
             <div 
-              className="absolute -top-[34px] sm:-top-[34px] -translate-x-1/2 transition-all duration-500 ease-out text-[#0080ff] z-20 pointer-events-none drop-shadow-md"
+              className="absolute -top-[28px] sm:-top-[30px] -translate-x-1/2 transition-all duration-500 ease-out text-[#0080ff] z-20 pointer-events-none drop-shadow-md"
               style={{ left: `${progressPercent}%` }}
             >
-              <LocomotiveSide size={32} />
+              <LocomotiveSide size={30} />
             </div>
           </div>
         </div>
@@ -470,8 +529,15 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 min-h-0 flex flex-col justify-center items-center px-3 sm:px-6 py-2 sm:py-3.5 w-full max-w-xl mx-auto">
-        {isTurmaStep ? (
-          /* Etapa de Seleção de Turma e Envio */
+        {isColaboradorStep ? (
+          /* Etapa 0: Identificação do Colaborador por Matrícula */
+          <ColaboradorStep
+            onConfirm={handleConfirmColaborador}
+            initialData={colaborador}
+            isDarkMode={isDarkMode}
+          />
+        ) : isTurmaStep ? (
+          /* Etapa Final: Seleção de Turma e Envio */
           <TurmaSelectionStep
             selectedTurma={selectedTurma}
             onSelectTurma={handleSelectTurma}
@@ -482,6 +548,7 @@ export default function App() {
             onReset={handleResetAll}
             totalRisks={totalRisks}
             isDarkMode={isDarkMode}
+            colaborador={colaborador}
           />
         ) : (
           /* Readiness Card com Pergunta */
@@ -555,11 +622,10 @@ export default function App() {
             <div className="w-full flex justify-between items-center mt-2.5 sm:mt-4 shrink-0 px-1">
               <button 
                 onClick={handlePrev}
-                disabled={currentStep === 1}
-                className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 px-5 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 disabled:opacity-0 disabled:pointer-events-none cursor-pointer"
+                className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 px-5 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_back</span>
-                <span>Anterior</span>
+                <span>{currentStep === 1 ? 'Tripulante' : 'Anterior'}</span>
               </button>
 
               <button 
