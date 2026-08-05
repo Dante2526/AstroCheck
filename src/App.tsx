@@ -625,7 +625,7 @@ export default function App() {
                 className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 px-5 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_back</span>
-                <span>{currentStep === 1 ? 'Tripulante' : 'Anterior'}</span>
+                <span>Voltar</span>
               </button>
 
               <button 

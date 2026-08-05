@@ -151,7 +151,6 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
                       <td style="padding: 10px 16px; font-size: 13px; font-weight: 700; color: #0f172a; border-top: 1px solid #edf2f7;">
                         ${escapeHtml(data.colaboradorNome)}
                         ${data.colaboradorMatricula ? `<span style="font-weight: 600; color: #0080ff; font-size: 12px; margin-left: 6px;">(Mat: ${escapeHtml(data.colaboradorMatricula)})</span>` : ''}
-                        ${data.colaboradorCargo ? `<div style="font-size: 11.5px; color: #64748b; font-weight: 500; margin-top: 2px;">${escapeHtml(data.colaboradorCargo)}</div>` : ''}
                       </td>
                     </tr>
                     ` : ''}
@@ -232,7 +231,7 @@ export async function sendReadinessEmail(
 ): Promise<SendReportResult> {
   const turmaConfig = TURMAS[data.turma];
   const html_content = buildReadinessEmailHtml(data);
-  const subject = `[AstroCheck] Prontidão Operacional — ${turmaConfig.label} (${turmaConfig.periodo}) — ${new Date(data.timestamp).toLocaleDateString('pt-BR')}`;
+  const subject = `AstroCheck Prontidão — ${turmaConfig.label} — ${new Date(data.timestamp).toLocaleDateString('pt-BR')}`;
 
   const templateParams = {
     html_content,
