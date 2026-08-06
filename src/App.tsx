@@ -393,33 +393,24 @@ export default function App() {
     <div className="bg-surface-tint-light dark:bg-[#111217] h-dvh max-h-dvh flex flex-col font-body-md text-on-surface dark:text-[#f7fafc] overflow-hidden select-none transition-colors duration-300">
       {/* TopAppBar */}
       <header className="bg-surface dark:bg-[#15171E] border-b border-transparent dark:border-[#252836] shadow-sm shrink-0 z-40 transition-colors duration-300">
-        <div className="relative flex justify-between items-center px-4 pt-2.5 pb-1 sm:pt-3 sm:pb-1.5 w-full max-w-2xl mx-auto min-h-[48px] sm:min-h-[52px]">
-          {/* Lado Esquerdo: Chip de Tripulante Ativo ou Espaço */}
-          <div className="flex items-center z-10">
-            {colaborador && !isColaboradorStep ? (
-              <button 
-                type="button" 
+        <div className="flex justify-between items-center px-4 pt-3.5 pb-2 sm:pt-4 sm:pb-2.5 w-full max-w-2xl mx-auto min-h-[54px] sm:min-h-[58px]">
+          {/* Lado Esquerdo: Espaçador equilibrado com botão sutil de retorno se ativo */}
+          <div className="w-9 sm:w-10 flex items-center justify-start">
+            {colaborador && !isColaboradorStep && (
+              <button
+                type="button"
                 onClick={() => setIsColaboradorStep(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-low dark:bg-[#1E2029] border border-outline-variant/40 dark:border-[#2d3139] hover:border-primary dark:hover:border-[#0080ff] transition-all text-xs font-semibold text-on-surface dark:text-[#f7fafc] cursor-pointer max-w-[140px] sm:max-w-[180px] shadow-2xs"
-                title="Clique para alterar o colaborador"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-[#0080ff] hover:bg-surface-container-low dark:hover:bg-[#1E2029] transition-all cursor-pointer"
+                title={`Alterar tripulante (${colaborador.nome})`}
               >
-                <span className="material-symbols-outlined text-[14px] text-[#0080ff] shrink-0">badge</span>
-                <span className="truncate">
-                  {(() => {
-                    const parts = colaborador.nome.trim().split(/\s+/);
-                    return parts.length > 1 ? `${parts[0]} ${parts[1]}` : parts[0];
-                  })()}
-                </span>
-                <span className="material-symbols-outlined text-[10px] text-on-surface-variant/70 dark:text-[#94a3b8]/70 shrink-0 ml-0.5">edit</span>
+                <span className="material-symbols-outlined text-[19px]">account_circle</span>
               </button>
-            ) : (
-              <div className="w-8 sm:w-10"></div>
             )}
           </div>
           
-          {/* Título AstroCheck + Escudo + Passo (100% Centralizado matematicamente) */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-auto">
-            <h1 className="text-base sm:text-lg font-bold text-primary dark:text-[#f7fafc] flex items-center justify-center gap-1.5 px-2 transition-colors duration-300">
+          {/* Título AstroCheck + Escudo + Subtítulo Perfeitamente Centralizados */}
+          <div className="flex-1 text-center flex flex-col items-center justify-center px-1">
+            <h1 className="text-base sm:text-lg font-bold text-primary dark:text-[#f7fafc] flex items-center justify-center gap-1.5 transition-colors duration-300">
               <span>AstroCheck</span>
               
               {/* Selo / Escudo de Verificação Verde */}
@@ -463,20 +454,29 @@ export default function App() {
                 </svg>
               </span>
             </h1>
-            <span className="text-[11px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] font-medium transition-colors duration-300 block">
+            <span className="text-[11px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] font-medium transition-colors duration-300 block truncate max-w-full">
               {isColaboradorStep ? (
                 <span className="text-[#0080ff] dark:text-[#0080ff] font-bold">Identificação de Tripulante</span>
               ) : isTurmaStep ? (
                 <span className="text-[#ff6b00] dark:text-[#ff7a00] font-bold">Etapa Final &bull; Seleção de Turma</span>
               ) : (
-                `Passo ${currentStep} de ${questions.length}`
+                <span>
+                  Passo {currentStep} de {questions.length}
+                  {colaborador ? (
+                    <strong className="text-[#0080ff] dark:text-[#38bdf8] font-semibold ml-1">
+                      &bull; {(() => {
+                        const parts = colaborador.nome.trim().split(/\s+/);
+                        return parts.length > 1 ? `${parts[0]} ${parts[1]}` : parts[0];
+                      })()}
+                    </strong>
+                  ) : ''}
+                </span>
               )}
             </span>
           </div>
 
-          {/* Ações da Direita */}
-          <div className="flex items-center z-10">
-            {/* BB-8 Dark Mode Interactive Toggle with Circular View Transition */}
+          {/* Lado Direito: BB-8 Dark Mode Toggle */}
+          <div className="w-9 sm:w-10 flex items-center justify-end">
             <BB8Toggle 
               isDarkMode={isDarkMode} 
               onToggle={handleToggleDarkMode} 

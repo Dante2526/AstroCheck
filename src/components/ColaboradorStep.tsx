@@ -111,9 +111,14 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
   const [isMobile] = useState<boolean>(() => isMobileDevice());
   const [matricula, setMatricula] = useState(initialData?.matricula || '');
   const [searchedColaborador, setSearchedColaborador] = useState<Colaborador | null>(() => {
-    return initialData ? findColaboradorByMatricula(initialData.matricula) || null : null;
+    if (!initialData) return null;
+    return {
+      matricula: initialData.matricula,
+      nome: initialData.nome,
+      cargo: initialData.cargo,
+    };
   });
-  const [hasSearched, setHasSearched] = useState(Boolean(initialData));
+  const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
   // Armazenamento local da biometria/facial vinculada (apenas para dispositivos móveis)
