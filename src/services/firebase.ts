@@ -69,27 +69,55 @@ const SECONDARY_COLLECTIONS = [
 // ============================================================================
 // ⚡ CACHE EM MEMÓRIA & PERSISTENTE (VELOCIDADE INSTANTÂNEA: 0ms & 0 LEITURAS)
 // ============================================================================
-const CACHE_STORAGE_KEY = 'astrocheck_colabs_cache_v2';
+// BUGFIX/SEGURANÇA: o cache persistente guarda nome/matrícula/cargo de
+// colaboradores buscados. Antes ficava salvo indefinidamente no localStorage
+// (até 500 registros), o que em um dispositivo compartilhado (tablet/celular
+// usado por vários colaboradores) virava uma lista pesquisável de dados de
+// colegas de trabalho. Agora cada entrada expira após 24h (duração de um
+// turno) e entradas expiradas são descartadas automaticamente.
+const CACHE_STORAGE_KEY = 'astrocheck_colabs_cache_v3';
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
 const memoryCache = new Map<string, FirestoreColaborador>();
 
-function initCache() {
-  if (typeof window === 'undefined') return;
+interface CachedEntry {
+  item: FirestoreColaborador;
+  cachedAt: number;
+}
+
+function readPersistentCache(): CachedEntry[] {
+  if (typeof window === 'undefined') return [];
   try {
     const stored = localStorage.getItem(CACHE_STORAGE_KEY);
-    if (stored) {
-      const list: FirestoreColaborador[] = JSON.parse(stored);
-      list.forEach(item => {
-        if (item.matricula) {
-          const raw = String(item.matricula).replace(/\D/g, '');
-          memoryCache.set(raw, item);
-          memoryCache.set(raw.padStart(8, '0'), item);
-          memoryCache.set(String(Number(raw)), item);
-        }
-      });
-    }
+    if (!stored) return [];
+    const list: CachedEntry[] = JSON.parse(stored);
+    const now = Date.now();
+    return list.filter(entry => entry && entry.item && (now - entry.cachedAt) < CACHE_TTL_MS);
   } catch {
-    // fallback seguro
+    return [];
   }
+}
+
+function writePersistentCache(entries: CachedEntry[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(entries.slice(0, 500)));
+  } catch {
+    // quota safe
+  }
+}
+
+function initCache() {
+  const fresh = readPersistentCache();
+  // Regrava já sem as entradas expiradas, para não deixar PII antiga acumulada
+  writePersistentCache(fresh);
+  fresh.forEach(({ item }) => {
+    if (item.matricula) {
+      const raw = String(item.matricula).replace(/\D/g, '');
+      memoryCache.set(raw, item);
+      memoryCache.set(raw.padStart(8, '0'), item);
+      memoryCache.set(String(Number(raw)), item);
+    }
+  });
 }
 initCache();
 
@@ -101,14 +129,13 @@ function cacheColaborador(item: FirestoreColaborador) {
   memoryCache.set(String(Number(raw)), item);
 
   if (typeof window !== 'undefined') {
-    try {
-      const all = Array.from(new Set(memoryCache.values()));
-      localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(all.slice(0, 500)));
-    } catch {
-      // quota safe
-    }
+    const now = Date.now();
+    const existing = readPersistentCache().filter(entry => entry.item.matricula !== item.matricula);
+    existing.unshift({ item, cachedAt: now });
+    writePersistentCache(existing);
   }
 }
+
 
 /**
  * Corrida paralela: Retorna imediatamente no PRIMEIRO resultado válido encontrado
