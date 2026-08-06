@@ -243,37 +243,43 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
       }
     }
 
+    let resolvedColab: { matricula: string; nome: string; cargo?: string } | null = null;
+
     try {
       const firestoreColab = await findColaboradorInFirestore(targetMatricula);
       if (firestoreColab) {
-        setMatricula(firestoreColab.matricula);
-        setSearchedColaborador({
+        resolvedColab = {
           matricula: firestoreColab.matricula,
           nome: firestoreColab.nome,
           cargo: firestoreColab.cargo,
-        });
-        setHasSearched(true);
-        setIsScanning(null);
-        return;
+        };
       }
     } catch {
       // continua para o fallback
     }
 
-    const found = findColaboradorByMatricula(targetMatricula);
-    if (found) {
-      setMatricula(found.matricula);
-      setSearchedColaborador(found);
-      setHasSearched(true);
-    } else if (savedBiometric) {
-      setMatricula(savedBiometric.matricula);
-      setSearchedColaborador({
-        matricula: savedBiometric.matricula,
-        nome: savedBiometric.nome,
-      });
-      setHasSearched(true);
+    if (!resolvedColab) {
+      const found = findColaboradorByMatricula(targetMatricula);
+      if (found) {
+        resolvedColab = {
+          matricula: found.matricula,
+          nome: found.nome,
+          cargo: found.cargo,
+        };
+      } else if (savedBiometric) {
+        resolvedColab = {
+          matricula: savedBiometric.matricula,
+          nome: savedBiometric.nome,
+        };
+      }
     }
+
     setIsScanning(null);
+
+    if (resolvedColab) {
+      // Avança instantaneamente para a primeira pergunta do checklist!
+      onConfirm(resolvedColab);
+    }
   };
 
   const handleProceed = () => {
@@ -421,8 +427,8 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                 Matrícula: <span className="tracking-wide font-mono">{searchedColaborador.matricula}</span>
               </div>
 
-              {/* Seletor de Vinculação Biométrica / Facial (Apenas em Dispositivos Móveis) */}
-              {isMobile && (
+              {/* Seletor de Vinculação Biométrica / Facial (Apenas se ainda não configurada) */}
+              {isMobile && !savedBiometric && (
                 <div className="mt-2.5 pt-2 border-t border-[#22c55e]/30 w-full flex flex-col items-center">
                   <span className="text-[10px] font-bold text-[#166534] dark:text-[#86efac] uppercase tracking-wider mb-1.5">
                     Vincular acesso neste aparelho:
@@ -431,11 +437,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                     <button
                       type="button"
                       onClick={() => handleLinkBiometric('fingerprint')}
-                      className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95 ${
-                        savedBiometric?.type === 'fingerprint' && savedBiometric.matricula === searchedColaborador.matricula
-                          ? 'bg-[#16a34a] text-white'
-                          : 'bg-white/80 dark:bg-[#15171e]/80 hover:bg-white dark:hover:bg-[#15171e] text-[#166534] dark:text-[#4ade80] border border-[#22c55e]/40'
-                      }`}
+                      className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 bg-white/80 dark:bg-[#15171e]/80 hover:bg-white dark:hover:bg-[#15171e] text-[#166534] dark:text-[#4ade80] border border-[#22c55e]/40 transition-all cursor-pointer shadow-xs active:scale-95"
                     >
                       <span className="material-symbols-outlined text-[16px]">fingerprint</span>
                       <span>Digital</span>
@@ -443,22 +445,18 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                     <button
                       type="button"
                       onClick={() => handleLinkBiometric('face')}
-                      className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95 ${
-                        savedBiometric?.type === 'face' && savedBiometric.matricula === searchedColaborador.matricula
-                          ? 'bg-[#16a34a] text-white'
-                          : 'bg-white/80 dark:bg-[#15171e]/80 hover:bg-white dark:hover:bg-[#15171e] text-[#166534] dark:text-[#4ade80] border border-[#22c55e]/40'
-                      }`}
+                      className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 bg-white/80 dark:bg-[#15171e]/80 hover:bg-white dark:hover:bg-[#15171e] text-[#166534] dark:text-[#4ade80] border border-[#22c55e]/40 transition-all cursor-pointer shadow-xs active:scale-95"
                     >
                       <span className="material-symbols-outlined text-[16px]">face</span>
                       <span>Facial</span>
                     </button>
                   </div>
-                  {biometricFeedback && (
-                    <div className="text-[11px] font-bold text-[#15803d] dark:text-[#4ade80] animate-fadeIn flex items-center gap-1 mt-1.5">
-                      <span className="material-symbols-outlined text-[14px]">check</span>
-                      <span>{biometricFeedback}</span>
-                    </div>
-                  )}
+                </div>
+              )}
+              {biometricFeedback && (
+                <div className="text-[11px] font-bold text-[#15803d] dark:text-[#4ade80] animate-fadeIn flex items-center gap-1 mt-1.5">
+                  <span className="material-symbols-outlined text-[14px]">check</span>
+                  <span>{biometricFeedback}</span>
                 </div>
               )}
             </div>
