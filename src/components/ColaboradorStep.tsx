@@ -14,13 +14,126 @@ interface SavedBiometric {
 }
 
 const STORAGE_KEY = 'astrocheck_saved_biometric';
+const CREDENTIAL_KEY = 'astrocheck_credential_id';
 
-// Detecção inteligente de dispositivo móvel (Smartphones / Tablets) vs PC Desktop
+// Helpers para conversão de ArrayBuffer / Base64 para WebAuthn
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary_string = window.atob(base64);
+  const len = binary_string.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary_string.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+// Verifica se o navegador tem suporte a biometria nativa de hardware do dispositivo
+const isWebAuthnAvailable = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return false;
+  if (!window.PublicKeyCredential || !navigator.credentials) return false;
+  try {
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch {
+    return false;
+  }
+};
+
+// Registra a credencial no sensor biométrico nativo do aparelho
+async function registerHardwareBiometric(matricula: string, nome: string): Promise<boolean> {
+  try {
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+    const userId = new Uint8Array(Array.from(matricula).map((c) => c.charCodeAt(0)));
+    const rpId = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+
+    const credential = (await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: {
+          name: 'AstroCheck',
+          id: rpId,
+        },
+        user: {
+          id: userId,
+          name: matricula,
+          displayName: nome,
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 },   // ES256
+          { type: 'public-key', alg: -257 }, // RS256
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+          residentKey: 'preferred',
+        },
+        timeout: 60000,
+        attestation: 'none',
+      },
+    })) as (PublicKeyCredential & { rawId?: ArrayBuffer }) | null;
+
+    if (credential && credential.rawId) {
+      const b64 = arrayBufferToBase64(credential.rawId);
+      localStorage.setItem(CREDENTIAL_KEY, b64);
+      return true;
+    }
+    return Boolean(credential);
+  } catch (err) {
+    console.warn('[AstroCheck] Falha/cancelamento no cadastro biométrico:', err);
+    return false;
+  }
+}
+
+// Executa a leitura física do sensor biométrico do celular
+async function verifyHardwareBiometric(): Promise<boolean> {
+  try {
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+    const rpId = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+    const credIdB64 = localStorage.getItem(CREDENTIAL_KEY);
+
+    const allowCredentials = credIdB64
+      ? [
+          {
+            id: base64ToArrayBuffer(credIdB64),
+            type: 'public-key' as const,
+            transports: ['internal' as AuthenticatorTransport],
+          },
+        ]
+      : undefined;
+
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        rpId,
+        allowCredentials,
+        userVerification: 'required',
+        timeout: 60000,
+      },
+    });
+
+    return Boolean(assertion);
+  } catch (err) {
+    console.warn('[AstroCheck] Leitura da digital cancelada ou incorreta:', err);
+    return false;
+  }
+}
+
+// Detecção de smartphone/tablet
 const isMobileDevice = (): boolean => {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || navigator.vendor || (window as unknown as { opera?: string }).opera || '';
   const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   return isMobileUA || (hasTouch && window.innerWidth <= 1024);
 };
 
@@ -41,7 +154,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     }
   });
 
-  // Se o aparelho já tiver a digital vinculada, inicia e permanece sempre no Modo Digital!
+  // Se o aparelho já tiver a digital vinculada, permanece sempre no Modo Digital!
   const [mode, setMode] = useState<'biometric' | 'manual'>(() => {
     if (isMobileDevice()) {
       try {
@@ -117,9 +230,22 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     setIsSearching(false);
   };
 
-  // Salvar/Vincular Digital no aparelho (Instantâneo, vai direto para a tela de digital)
-  const handleLinkBiometric = () => {
+  // Salvar/Vincular Digital no aparelho (aciona o sensor físico para cadastrar)
+  const handleLinkBiometric = async () => {
     if (!searchedColaborador) return;
+
+    setBiometricFeedback('Aguardando sensor do celular...');
+    const hasWebAuthn = await isWebAuthnAvailable();
+    if (hasWebAuthn) {
+      const enrolled = await registerHardwareBiometric(
+        searchedColaborador.matricula,
+        searchedColaborador.nome
+      );
+      if (!enrolled) {
+        setBiometricFeedback('Cadastro biométrico cancelado no celular.');
+        return;
+      }
+    }
 
     const data: SavedBiometric = {
       matricula: searchedColaborador.matricula,
@@ -136,32 +262,56 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     }
   };
 
-  // Desvincular biometria
+  // Desvincular biometria deste aparelho
   const handleUnlinkBiometric = () => {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CREDENTIAL_KEY);
     setSavedBiometric(null);
     setBiometricFeedback(null);
     setMode('manual');
     handleClear();
   };
 
-  // Executar Acesso com Digital (Instantâneo com animação ultra-rápida)
+  // Executar Acesso com Digital (Exige autenticação física do sensor do celular)
   const handleQuickScan = async () => {
     if (!savedBiometric) return;
     setIsScanning(true);
     setBiometricFeedback(null);
 
-    // Efeito tátil no celular se suportado
+    const hasWebAuthn = await isWebAuthnAvailable();
+    let authOk = false;
+
+    if (hasWebAuthn) {
+      const hasCredId = Boolean(localStorage.getItem(CREDENTIAL_KEY));
+      if (hasCredId) {
+        // Aciona o sensor físico de impressão digital do celular
+        authOk = await verifyHardwareBiometric();
+      } else {
+        // Se ainda não tinha credencial salva, cadastra o sensor agora
+        authOk = await registerHardwareBiometric(
+          savedBiometric.matricula,
+          savedBiometric.nome
+        );
+      }
+    } else {
+      // Fallback para dispositivos sem suporte a WebAuthn
+      authOk = true;
+    }
+
+    if (!authOk) {
+      setIsScanning(false);
+      setBiometricFeedback('⚠️ Autenticação biométrica necessária para entrar.');
+      return;
+    }
+
+    // Sucesso na digital: vibração de confirmação
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
-        navigator.vibrate(40);
+        navigator.vibrate([40, 30, 40]);
       } catch {
         // ignora
       }
     }
-
-    // Animação visual rápida de leitura (200ms)
-    await new Promise((res) => setTimeout(res, 200));
 
     let resolvedColab: { matricula: string; nome: string; cargo?: string } | null = null;
 
@@ -197,7 +347,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     setIsScanning(false);
 
     if (resolvedColab) {
-      // Auto-avanço direto para a primeira pergunta do checklist!
+      // Avança direto para a primeira pergunta do checklist!
       onConfirm(resolvedColab);
     }
   };
@@ -237,9 +387,9 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
         </h2>
         <p className="text-xs text-on-surface-variant dark:text-[#94a3b8] mt-0.5 max-w-sm">
           {mode === 'biometric'
-            ? 'Toque abaixo para autenticar e iniciar instantaneamente.'
+            ? 'Toque abaixo para validar sua impressão digital no sensor do celular.'
             : isMobile 
-              ? 'Informe sua matrícula ou use sua digital configurada.' 
+              ? 'Informe sua matrícula funcional para iniciar.' 
               : 'Informe sua matrícula funcional para iniciar.'}
         </p>
       </div>
@@ -251,13 +401,16 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
           <button
             type="button"
             onClick={handleQuickScan}
-            className="w-full max-w-[270px] py-4 px-4 bg-gradient-to-br from-[#0080ff] to-[#0055cc] hover:from-[#0070e0] hover:to-[#0048b0] text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95 group"
+            disabled={isScanning}
+            className="w-full max-w-[270px] py-4 px-4 bg-gradient-to-br from-[#0080ff] to-[#0055cc] hover:from-[#0070e0] hover:to-[#0048b0] text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95 group disabled:opacity-75"
           >
             <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
-              <span className="material-symbols-outlined text-[36px]">fingerprint</span>
+              <span className="material-symbols-outlined text-[36px]">
+                {isScanning ? 'hourglass_top' : 'fingerprint'}
+              </span>
             </div>
             <span className="text-sm sm:text-base font-extrabold tracking-wide">
-              Toque para Entrar com Digital
+              {isScanning ? 'Aguardando Sensor...' : 'Toque para Entrar com Digital'}
             </span>
           </button>
 
@@ -273,7 +426,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
 
           {/* Feedback de erro/cancelamento */}
           {biometricFeedback && (
-            <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 animate-fadeIn text-center">
+            <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 animate-fadeIn text-center px-2">
               {biometricFeedback}
             </div>
           )}
@@ -305,18 +458,6 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
       ) : (
         /* ÁREA CENTRAL: MODO MANUAL (DIGITAÇÃO DE MATRÍCULA) */
         <div className="my-auto py-1 flex flex-col items-center gap-3 max-w-sm w-full mx-auto animate-fadeIn">
-          
-          {/* Botão de retorno ao modo biométrico caso já tenha digital cadastrada */}
-          {isMobile && savedBiometric && (
-            <button
-              type="button"
-              onClick={() => setMode('biometric')}
-              className="w-full max-w-[260px] py-1.5 px-3 bg-[#0080ff]/10 dark:bg-[#0080ff]/20 text-[#0080ff] dark:text-[#38bdf8] hover:bg-[#0080ff]/20 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">fingerprint</span>
-              <span>Voltar para Acesso por Digital</span>
-            </button>
-          )}
 
           {/* Campo Matrícula em Cima com Botão Buscar Embaixo */}
           <div className="w-full flex flex-col items-center">
@@ -435,21 +576,6 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
             <span>Iniciar Checklist</span>
             <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
           </button>
-        </div>
-      )}
-
-      {/* Modal / Overlay de Scanner Biométrico Animado (Mobile) */}
-      {isScanning && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-white animate-fadeIn">
-          <div className="relative w-20 h-20 rounded-full border-2 border-[#0080ff] flex items-center justify-center mb-4 animate-pulse">
-            <span className="material-symbols-outlined text-[44px] text-[#0080ff] animate-bounce">
-              fingerprint
-            </span>
-          </div>
-          <h3 className="text-base font-bold mb-1">
-            Validando Digital...
-          </h3>
-          <p className="text-xs text-gray-300">Autenticando sensor seguro do dispositivo</p>
         </div>
       )}
 
