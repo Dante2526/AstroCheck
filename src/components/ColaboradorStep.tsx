@@ -11,99 +11,9 @@ interface ColaboradorStepProps {
 interface SavedBiometric {
   matricula: string;
   nome: string;
-  hasHardwareAuth?: boolean;
 }
 
 const STORAGE_KEY = 'astrocheck_saved_biometric';
-
-// Verifica se o navegador tem suporte a biometria nativa de hardware (WebAuthn / Passkey)
-const isWebAuthnAvailable = async (): Promise<boolean> => {
-  if (typeof window === 'undefined') return false;
-  if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-    return false; // Navegadores exigem HTTPS para liberar o sensor biométrico
-  }
-  if (!window.PublicKeyCredential || !navigator.credentials) {
-    return false;
-  }
-  try {
-    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  } catch {
-    return false;
-  }
-};
-
-// Registra a biometria no hardware do celular/computador
-async function registerHardwareCredential(matricula: string, nome: string): Promise<boolean> {
-  try {
-    const challenge = new Uint8Array(32);
-    window.crypto.getRandomValues(challenge);
-    const userId = new TextEncoder().encode(matricula);
-
-    const credential = await navigator.credentials.create({
-      publicKey: {
-        challenge,
-        rp: {
-          name: 'AstroCheck',
-          id: window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname,
-        },
-        user: {
-          id: userId,
-          name: matricula,
-          displayName: nome,
-        },
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7 },   // ES256
-          { type: 'public-key', alg: -257 },  // RS256
-        ],
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          userVerification: 'required',
-          requireResidentKey: false,
-        },
-        timeout: 60000,
-        attestation: 'none',
-      },
-    });
-
-    return Boolean(credential);
-  } catch (err) {
-    console.warn('[AstroCheck] Registro biométrico de hardware:', err);
-    return false;
-  }
-}
-
-// Valida a digital no sensor físico de hardware
-async function verifyHardwareCredential(): Promise<boolean> {
-  try {
-    const challenge = new Uint8Array(32);
-    window.crypto.getRandomValues(challenge);
-
-    const savedCredIdStr = localStorage.getItem('astrocheck_credential_id');
-    const allowCredentials = savedCredIdStr
-      ? [
-          {
-            type: 'public-key' as const,
-            id: Uint8Array.from(atob(savedCredIdStr), (c) => c.charCodeAt(0)),
-          },
-        ]
-      : undefined;
-
-    const assertion = await navigator.credentials.get({
-      publicKey: {
-        challenge,
-        rpId: window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname,
-        userVerification: 'preferred',
-        allowCredentials,
-        timeout: 60000,
-      },
-    });
-
-    return Boolean(assertion);
-  } catch (err) {
-    console.warn('[AstroCheck] Verificação biométrica WebAuthn:', err);
-    return true;
-  }
-}
 
 // Detecção inteligente de dispositivo móvel (Smartphones / Tablets) vs PC Desktop
 const isMobileDevice = (): boolean => {
@@ -131,9 +41,9 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     }
   });
 
-  // Se o aparelho já tiver a digital configurada, entra direto no Modo Digital!
+  // Se o aparelho já tiver a digital vinculada, inicia e permanece sempre no Modo Digital!
   const [mode, setMode] = useState<'biometric' | 'manual'>(() => {
-    if (isMobileDevice() && !initialData) {
+    if (isMobileDevice()) {
       try {
         const item = localStorage.getItem(STORAGE_KEY);
         if (item) return 'biometric';
@@ -207,31 +117,20 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     setIsSearching(false);
   };
 
-  // Vincular Digital no aparelho
-  const handleLinkBiometric = async () => {
+  // Salvar/Vincular Digital no aparelho (Instantâneo, vai direto para a tela de digital)
+  const handleLinkBiometric = () => {
     if (!searchedColaborador) return;
-
-    setBiometricFeedback('Aguardando sensor do aparelho...');
-    let hasHardware = false;
-
-    const webAuthnOk = await isWebAuthnAvailable();
-    if (webAuthnOk) {
-      hasHardware = await registerHardwareCredential(
-        searchedColaborador.matricula,
-        searchedColaborador.nome
-      );
-    }
 
     const data: SavedBiometric = {
       matricula: searchedColaborador.matricula,
       nome: searchedColaborador.nome,
-      hasHardwareAuth: hasHardware,
     };
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       setSavedBiometric(data);
-      setBiometricFeedback('✅ Digital vinculada com sucesso a este aparelho!');
+      setMode('biometric');
+      setBiometricFeedback(null);
     } catch {
       setBiometricFeedback('Erro ao salvar no dispositivo.');
     }
@@ -246,22 +145,23 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     handleClear();
   };
 
-  // Executar Acesso com Digital (Aciona Sensor e Avança Instantaneamente)
+  // Executar Acesso com Digital (Instantâneo com animação ultra-rápida)
   const handleQuickScan = async () => {
     if (!savedBiometric) return;
     setIsScanning(true);
     setBiometricFeedback(null);
 
-    // Se o aparelho tiver suporte a biometria nativa, aciona a janela do sensor do celular
-    const webAuthnOk = await isWebAuthnAvailable();
-    if (webAuthnOk) {
-      const verified = await verifyHardwareCredential();
-      if (!verified) {
-        setIsScanning(false);
-        setBiometricFeedback('Autenticação biométrica cancelada.');
-        return;
+    // Efeito tátil no celular se suportado
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(40);
+      } catch {
+        // ignora
       }
     }
+
+    // Animação visual rápida de leitura (200ms)
+    await new Promise((res) => setTimeout(res, 200));
 
     let resolvedColab: { matricula: string; nome: string; cargo?: string } | null = null;
 
