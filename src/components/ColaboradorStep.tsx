@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Colaborador, findColaboradorByMatricula } from '../config/colaboradores';
-import { findColaboradorInFirestore } from '../services/firebase';
+import { findColaboradorInFirestore, getCachedColaborador } from '../services/firebase';
 
 interface ColaboradorStepProps {
   onConfirm: (colaborador: { matricula: string; nome: string; cargo?: string }) => void;
@@ -340,20 +340,21 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
 
     let resolvedColab: { matricula: string; nome: string; cargo?: string } | null = null;
 
-    try {
-      const firestoreColab = await findColaboradorInFirestore(savedBiometric.matricula);
-      if (firestoreColab) {
-        resolvedColab = {
-          matricula: firestoreColab.matricula,
-          nome: firestoreColab.nome,
-          cargo: firestoreColab.cargo,
-        };
-      }
-    } catch {
-      // continua para o fallback
-    }
-
-    if (!resolvedColab) {
+    // BUGFIX/PERFORMANCE: antes, todo toque no acesso rápido disparava uma
+    // busca completa no Firestore (até ~9 coleções, dezenas de leituras),
+    // só pra reconfirmar dados que já estavam salvos no aparelho — o
+    // oposto do "0 leituras" que o próprio cache foi feito pra garantir.
+    // Agora usamos primeiro o cache local (0 leituras) e a base local; só
+    // caem para os dados mínimos já salvos no vínculo biométrico se nada
+    // disso tiver a pessoa.
+    const cachedColab = getCachedColaborador(savedBiometric.matricula);
+    if (cachedColab) {
+      resolvedColab = {
+        matricula: cachedColab.matricula,
+        nome: cachedColab.nome,
+        cargo: cachedColab.cargo,
+      };
+    } else {
       const found = findColaboradorByMatricula(savedBiometric.matricula);
       if (found) {
         resolvedColab = {
@@ -400,27 +401,27 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
           />
           <div className="absolute -bottom-1 -right-1 bg-[#0080ff] text-white p-1 rounded-full shadow-md flex items-center justify-center">
             <span className="material-symbols-outlined text-[13px]">
-              {mode === 'biometric' ? 'fingerprint' : 'badge'}
+              {mode === 'biometric' ? 'verified_user' : 'badge'}
             </span>
           </div>
         </div>
 
         <h2 className="text-base sm:text-lg font-bold text-on-surface dark:text-[#f7fafc]">
-          {mode === 'biometric' ? 'Acesso por Digital' : 'Identificação do Tripulante'}
+          {mode === 'biometric' ? 'Acesso por Biometria' : 'Identificação do Tripulante'}
         </h2>
         <p className="text-xs text-on-surface-variant dark:text-[#94a3b8] mt-0.5 max-w-sm">
           {mode === 'biometric'
-            ? 'Toque abaixo para validar sua impressão digital no sensor do celular.'
+            ? 'Toque abaixo e valide com a biometria do celular (digital, facial ou a que estiver configurada).'
             : isMobile 
               ? 'Informe sua matrícula funcional para iniciar.' 
               : 'Informe sua matrícula funcional para iniciar.'}
         </p>
       </div>
 
-      {/* ÁREA CENTRAL: MODO BIOMÉTRICO (DIGITAL) */}
+      {/* ÁREA CENTRAL: MODO BIOMÉTRICO (DIGITAL, FACIAL OU OUTRA CONFIGURADA NO APARELHO) */}
       {mode === 'biometric' && savedBiometric ? (
         <div className="my-auto py-2 flex flex-col items-center gap-3.5 max-w-sm w-full mx-auto animate-fadeIn">
-          {/* Botão de Destaque para Digital: 100% Estático, Firme e sem Piscar */}
+          {/* Botão de Destaque para Biometria: 100% Estático, Firme e sem Piscar */}
           <button
             type="button"
             onClick={handleQuickScan}
@@ -432,7 +433,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
               </span>
             </div>
             <span className="text-sm sm:text-base font-extrabold tracking-wide">
-              Toque para Entrar com Digital
+              Toque para Entrar com Biometria
             </span>
           </button>
 
@@ -471,9 +472,9 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
               type="button"
               onClick={handleUnlinkBiometric}
               className="text-[11px] text-red-500/80 hover:text-red-600 dark:text-red-400/80 hover:underline cursor-pointer"
-              title="Desvincular digital deste aparelho"
+              title="Desvincular biometria deste aparelho"
             >
-              Desvincular digital deste aparelho
+              Desvincular biometria deste aparelho
             </button>
           </div>
         </div>
@@ -551,7 +552,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                   Matrícula: <span className="tracking-wide font-mono">{searchedColaborador.matricula}</span>
                 </div>
 
-                {/* Opção de Salvar Digital no Aparelho (Apenas Mobile se ainda não salva) */}
+                {/* Opção de Salvar Biometria no Aparelho (Apenas Mobile se ainda não salva) */}
                 {isMobile && !savedBiometric && (
                   <div className="mt-2.5 pt-2 border-t border-[#22c55e]/30 w-full flex flex-col items-center">
                     <button
@@ -560,7 +561,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                       className="w-full py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-[#16a34a] hover:bg-[#15803d] text-white transition-all cursor-pointer shadow-xs active:scale-95"
                     >
                       <span className="material-symbols-outlined text-[16px]">fingerprint</span>
-                      <span>Salvar Digital neste Aparelho</span>
+                      <span>Salvar Biometria neste Aparelho</span>
                     </button>
                   </div>
                 )}

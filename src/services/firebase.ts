@@ -136,6 +136,21 @@ function cacheColaborador(item: FirestoreColaborador) {
   }
 }
 
+/**
+ * Consulta SOMENTE o cache local (memória), sem nunca disparar leitura no
+ * Firestore. Usado por fluxos que precisam ser instantâneos e baratos
+ * (ex: acesso rápido por biometria), onde uma busca completa multi-coleção
+ * a cada toque seria uma leitura desnecessária.
+ */
+export function getCachedColaborador(inputMatricula: string): FirestoreColaborador | null {
+  const digitsOnly = inputMatricula.trim().replace(/\D/g, '');
+  if (!digitsOnly) return null;
+  if (memoryCache.has(digitsOnly)) return memoryCache.get(digitsOnly)!;
+  const padded8 = digitsOnly.padStart(8, '0');
+  if (memoryCache.has(padded8)) return memoryCache.get(padded8)!;
+  return null;
+}
+
 
 /**
  * Corrida paralela: Retorna imediatamente no PRIMEIRO resultado válido encontrado
