@@ -239,6 +239,8 @@ export default function App() {
     } catch (e) {
       console.warn('[AstroCheck] Erro ao persistir colaborador:', e);
     }
+    setCurrentStep(1);
+    setIsTurmaStep(false);
     setIsColaboradorStep(false);
   };
 
