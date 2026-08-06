@@ -179,7 +179,6 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [biometricFeedback, setBiometricFeedback] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState<boolean>(false);
 
   // Ao alterar o texto da matrícula, reseta o resultado anterior
   const handleChangeMatricula = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,10 +271,9 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     handleClear();
   };
 
-  // Executar Acesso com Digital (Exige autenticação física do sensor do celular)
+  // Executar Acesso com Digital (Exige autenticação física do sensor do celular sem alterar texto nem piscar)
   const handleQuickScan = async () => {
     if (!savedBiometric) return;
-    setIsScanning(true);
     setBiometricFeedback(null);
 
     const hasWebAuthn = await isWebAuthnAvailable();
@@ -299,8 +297,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     }
 
     if (!authOk) {
-      setIsScanning(false);
-      setBiometricFeedback('⚠️ Autenticação biométrica necessária para entrar.');
+      setBiometricFeedback('⚠️ Autenticação biométrica não concluída.');
       return;
     }
 
@@ -344,8 +341,6 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
       }
     }
 
-    setIsScanning(false);
-
     if (resolvedColab) {
       // Avança direto para a primeira pergunta do checklist!
       onConfirm(resolvedColab);
@@ -365,9 +360,9 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
   const isNotFound = hasSearched && !isSearching && !searchedColaborador && matricula.trim().length > 0;
 
   return (
-    <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 shadow-[0_4px_24px_rgba(32,59,139,0.12)] dark:shadow-[0_4px_28px_rgba(0,0,0,0.5)] border-[3px] border-primary/20 dark:border-[#252836] p-4 sm:p-5 flex-1 min-h-0 max-h-[580px] justify-between">
+    <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-colors duration-300 shadow-[0_4px_24px_rgba(32,59,139,0.12)] dark:shadow-[0_4px_28px_rgba(0,0,0,0.5)] border-[3px] border-primary/20 dark:border-[#252836] p-4 sm:p-5 flex-1 min-h-0 max-h-[580px] justify-between">
       
-      {/* Top Header com Mascote da Imagem 8 */}
+      {/* Top Header com Mascote */}
       <div className="text-center shrink-0 flex flex-col items-center">
         <div className="relative w-14 h-14 sm:w-16 sm:h-16 mb-1.5 flex items-center justify-center bg-primary/10 dark:bg-primary/20 rounded-2xl p-1.5">
           <img 
@@ -397,20 +392,19 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
       {/* ÁREA CENTRAL: MODO BIOMÉTRICO (DIGITAL) */}
       {mode === 'biometric' && savedBiometric ? (
         <div className="my-auto py-2 flex flex-col items-center gap-3.5 max-w-sm w-full mx-auto animate-fadeIn">
-          {/* Botão de Destaque para Digital */}
+          {/* Botão de Destaque para Digital: 100% Estático, Firme e sem Piscar */}
           <button
             type="button"
             onClick={handleQuickScan}
-            disabled={isScanning}
-            className="w-full max-w-[270px] py-4 px-4 bg-gradient-to-br from-[#0080ff] to-[#0055cc] hover:from-[#0070e0] hover:to-[#0048b0] text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95 group disabled:opacity-75"
+            className="w-full max-w-[270px] py-4 px-4 bg-gradient-to-br from-[#0080ff] to-[#0055cc] hover:from-[#0070e0] hover:to-[#0048b0] text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-transform active:scale-98 cursor-pointer"
           >
-            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
               <span className="material-symbols-outlined text-[36px]">
-                {isScanning ? 'hourglass_top' : 'fingerprint'}
+                fingerprint
               </span>
             </div>
             <span className="text-sm sm:text-base font-extrabold tracking-wide">
-              {isScanning ? 'Aguardando Sensor...' : 'Toque para Entrar com Digital'}
+              Toque para Entrar com Digital
             </span>
           </button>
 
