@@ -73,12 +73,17 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
 
 export const ALL_TURMA_KEYS: TurmaKey[] = ['A', 'B', 'C', 'D'];
 
-// Configuração do EmailJS (padrão familiar do PAINEL-DSS com suporte a variáveis .env)
+// Configuração do EmailJS — lida exclusivamente das variáveis de ambiente.
+// BUGFIX/SEGURANÇA: valores reais de credenciais estavam hardcoded aqui como
+// fallback e ficaram expostos no histórico do repositório público. Sem a
+// env var configurada, o app cai automaticamente no "modo simulação" já
+// existente em emailService.ts (hasCredentials = false), então não é
+// necessário (nem seguro) manter um fallback com chave real.
 export const EMAILJS_SERVICE_ID = 
-  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_SERVICE_ID) || 'service_adjw0cj';
+  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_SERVICE_ID) || '';
 
 export const EMAILJS_TEMPLATE_ID = 
-  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_TEMPLATE_ID) || 'template_owo0dmm';
+  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_TEMPLATE_ID) || '';
 
 export const EMAILJS_PUBLIC_KEY = 
-  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_PUBLIC_KEY) || 'Ef-7IoF9U9NQ_iV8X';
+  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_PUBLIC_KEY) || '';

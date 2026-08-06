@@ -156,17 +156,23 @@ export default function App() {
   });
   const [isColaboradorStep, setIsColaboradorStep] = useState<boolean>(true);
 
-  const [answers, setAnswers] = useState<Record<number, 'yes' | 'no' | null>>({
-    1: 'yes',
-    2: 'no',
-    3: 'no',
-    4: 'yes',
-    5: 'no',
-    6: 'no',
-    7: 'no',
-    8: 'yes',
-    9: 'yes',
+  // BUGFIX: as respostas devem iniciar como `null` (não respondidas).
+  // Antes, cada pergunta já nascia preenchida com o valor "seguro", permitindo
+  // que o usuário avançasse o checklist inteiro sem responder nada e ainda
+  // assim gerasse um relatório "100% APTO".
+  const createEmptyAnswers = (): Record<number, 'yes' | 'no' | null> => ({
+    1: null,
+    2: null,
+    3: null,
+    4: null,
+    5: null,
+    6: null,
+    7: null,
+    8: null,
+    9: null,
   });
+
+  const [answers, setAnswers] = useState<Record<number, 'yes' | 'no' | null>>(createEmptyAnswers);
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
@@ -239,12 +245,23 @@ export default function App() {
     } catch (e) {
       console.warn('[AstroCheck] Erro ao persistir colaborador:', e);
     }
+    // BUGFIX: sem isto, ao trocar de tripulante (botão de conta no header) o
+    // checklist e o status de envio da sessão anterior permaneciam ativos.
+    // Isso podia fazer o app exibir "Prontidão Enviada com Sucesso!" para o
+    // novo colaborador sem que o e-mail dele tivesse sido realmente enviado.
+    setAnswers(createEmptyAnswers());
+    setSelectedTurma(null);
+    setIsEmailSuccess(false);
+    setIsSendingEmail(false);
     setCurrentStep(1);
     setIsTurmaStep(false);
     setIsColaboradorStep(false);
   };
 
   const handleNext = () => {
+    // BUGFIX: impede avançar sem responder a pergunta atual.
+    if (selectedAnswer === null || selectedAnswer === undefined) return;
+
     if (currentStep < questions.length) {
       setCurrentStep(currentStep + 1);
     } else if (currentStep === questions.length) {
@@ -299,17 +316,7 @@ export default function App() {
   };
 
   const handleResetAll = () => {
-    setAnswers({
-      1: 'yes',
-      2: 'no',
-      3: 'no',
-      4: 'yes',
-      5: 'no',
-      6: 'no',
-      7: 'no',
-      8: 'yes',
-      9: 'yes',
-    });
+    setAnswers(createEmptyAnswers());
     setCurrentStep(1);
     setIsTurmaStep(false);
     setSelectedTurma(null);
@@ -632,6 +639,7 @@ export default function App() {
 
               <button 
                 onClick={handleNext} 
+                disabled={selectedAnswer === null || selectedAnswer === undefined}
                 className="bg-[#ff6b00] hover:bg-[#ea580c] active:bg-[#c2410c] dark:bg-[#ff7a00] dark:hover:bg-[#ea580c] text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 px-5 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 <span>{currentStep === questions.length ? 'Finalizar' : 'Avançar'}</span>

@@ -11,8 +11,14 @@ export interface Colaborador {
  * Base inicial de colaboradores cadastrados no AstroCheck.
  * Todas as matrículas seguem o padrão de 8 dígitos.
  */
+// BUGFIX/SEGURANÇA: o registro de teste (matrícula 00000000) só é incluído
+// em ambiente de desenvolvimento (`import.meta.env.DEV`). Antes ele também
+// funcionava em produção como fallback quando a matrícula não era achada no
+// Firestore, permitindo "autenticação" com um colaborador fictício.
+const isDevEnv = typeof import.meta !== 'undefined' && Boolean((import.meta as any)?.env?.DEV);
+
 export const COLABORADORES_MOCK: Colaborador[] = [
-  { matricula: '00000000', nome: 'Colaborador de Teste', turmaPadrao: 'A' },
+  ...(isDevEnv ? [{ matricula: '00000000', nome: 'Colaborador de Teste', turmaPadrao: 'A' as const }] : []),
   { matricula: '00001021', nome: 'Carlos Eduardo Santos', turmaPadrao: 'A' },
   { matricula: '00001045', nome: 'Mariana Silva Oliveira', turmaPadrao: 'B' },
   { matricula: '00002033', nome: 'Roberto Albuquerque Costa', turmaPadrao: 'C' },
