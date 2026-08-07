@@ -46,7 +46,8 @@ function compactHtml(html: string): string {
 }
 
 /**
- * Monta o template HTML formatado, moderno e ultra-leve (< 3KB) para envio ao gestor.
+ * Monta o template HTML formatado, moderno e ultra-leve (< 3.2KB) para envio ao gestor.
+ * Projetado para excelente legibilidade tanto em Dark Mode quanto em Light Mode.
  */
 export function buildReadinessEmailHtml(data: ReadinessReportData): string {
   const turmaConfig = TURMAS[data.turma];
@@ -59,25 +60,28 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
   });
 
   const isFullApto = data.totalRisks === 0;
-  const statusColor = isFullApto ? '#16a34a' : data.totalRisks <= 2 ? '#d97706' : '#dc2626';
-  const statusBg = isFullApto ? '#dcfce7' : data.totalRisks <= 2 ? '#fef9c3' : '#fee2e2';
-  const statusBorder = isFullApto ? '#86efac' : data.totalRisks <= 2 ? '#fde047' : '#fca5a5';
-  const statusText = isFullApto 
+  const statusBg = isFullApto ? '#15803d' : data.totalRisks <= 2 ? '#d97706' : '#b91c1c';
+  const statusTitle = isFullApto 
     ? '✅ 100% APTO PARA JORNADA' 
     : data.totalRisks <= 2 
       ? `⚠️ ATENÇÃO: ${data.totalRisks} PONTO(S) DE RISCO` 
       : `🚨 NÃO APTO: ${data.totalRisks} PONTOS DE RISCO`;
+  const statusSub = isFullApto
+    ? 'Colaborador declarou estar 100% apto e seguro para a jornada.'
+    : data.totalRisks <= 2
+      ? 'Atenção: Respostas indicam desvios nos itens de segurança/saúde.'
+      : 'Atenção necessária: Respostas indicam desvios críticos de prontidão.';
 
   const tableRows = data.answers.map(item => {
     const isOk = !item.isRisk;
-    const answerLabel = item.answer === 'yes' ? 'SIM' : item.answer === 'no' ? 'NÃO' : 'NÃO RESPONDIDO';
-    const answerColor = isOk ? '#15803d' : '#b91c1c';
-    const answerBg = isOk ? '#f0fdf4' : '#fef2f2';
-    const answerBorder = isOk ? '#bbf7d0' : '#fecaca';
+    const answerLabel = item.answer === 'yes' ? 'SIM' : item.answer === 'no' ? 'NÃO' : 'N/R';
+    const badgeBg = isOk ? '#16a34a' : '#dc2626';
+    const badgeIcon = isOk ? '✓' : '⚠️';
+    const badgeText = `${answerLabel} ${badgeIcon}`;
 
-    return `<tr style="border-bottom:1px solid #e2e8f0;">` +
-      `<td style="padding:10px 12px;font-size:13px;color:#1e293b;line-height:1.4;"><strong style="color:#64748b;">#${item.questionId}</strong> ${escapeHtml(item.questionText)}</td>` +
-      `<td style="padding:10px 12px;text-align:center;white-space:nowrap;"><span style="display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;background:${answerBg};color:${answerColor};border:1px solid ${answerBorder};">${escapeHtml(answerLabel)} ${isOk ? '✓' : '⚠️'}</span></td>` +
+    return `<tr style="border-bottom:1px solid #334155;">` +
+      `<td style="padding:10px 12px;font-size:12.5px;color:#f8fafc;line-height:1.45;"><strong style="color:#38bdf8;margin-right:4px;">#${item.questionId}</strong>${escapeHtml(item.questionText)}</td>` +
+      `<td style="padding:10px 12px;text-align:center;white-space:nowrap;"><span style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:800;background-color:${badgeBg};color:#ffffff;">${escapeHtml(badgeText)}</span></td>` +
       `</tr>`;
   }).join('');
 
@@ -85,45 +89,66 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head><meta charset="UTF-8"><title>Relatório AstroCheck</title></head>
-    <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:16px 8px;">
+    <body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#0f172a;padding:20px 10px;">
         <tr><td align="center">
-          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:580px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:580px;background:#1e293b;border-radius:14px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.3);border:1px solid #334155;">
             <tr>
-              <td style="background:#0f172a;padding:20px 24px;text-align:center;border-bottom:3px solid ${turmaConfig.color};">
-                <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">AstroCheck 🛡️</span>
+              <td style="background:#0b1329;padding:20px 24px;text-align:center;border-bottom:3px solid ${turmaConfig.color};">
+                <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">AstroCheck 🛡️</div>
                 <div style="margin-top:4px;color:#94a3b8;font-size:12px;font-weight:500;">Checklist de Prontidão Operacional &amp; Segurança</div>
               </td>
             </tr>
             <tr>
-              <td style="padding:16px 20px 8px 20px;">
-                <div style="background:${statusBg};border:1px solid ${statusBorder};border-radius:10px;padding:12px;text-align:center;">
-                  <strong style="font-size:15px;color:${statusColor};display:block;">${statusText}</strong>
-                  <span style="font-size:12px;color:#334155;margin-top:2px;display:block;">${isFullApto ? 'Colaborador declarou estar 100% apto para a jornada.' : 'Atenção necessária: Respostas indicam desvios nos itens de prontidão.'}</span>
+              <td style="padding:16px 20px 10px 20px;">
+                <div style="background-color:${statusBg};border-radius:10px;padding:14px 18px;text-align:center;">
+                  <div style="font-size:15px;font-weight:800;color:#ffffff;letter-spacing:0.3px;">${statusTitle}</div>
+                  <div style="font-size:12px;color:#ffffff;opacity:0.95;margin-top:4px;line-height:1.3;">${statusSub}</div>
                 </div>
               </td>
             </tr>
             <tr>
               <td style="padding:6px 20px 14px 20px;">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;">
-                  <tr><td style="padding:8px 12px;color:#64748b;font-weight:600;width:35%;">Turma / Turno:</td><td style="padding:8px 12px;font-weight:700;color:#0f172a;"><span style="color:${turmaConfig.color};">${turmaConfig.label}</span> (${turmaConfig.turno} — ${turmaConfig.horario})</td></tr>
-                  <tr><td style="padding:8px 12px;color:#64748b;font-weight:600;border-top:1px solid #edf2f7;">Data e Horário:</td><td style="padding:8px 12px;font-weight:600;color:#0f172a;border-top:1px solid #edf2f7;">${dateFormatted}</td></tr>
-                  ${data.colaboradorNome ? `<tr><td style="padding:8px 12px;color:#64748b;font-weight:600;border-top:1px solid #edf2f7;">Colaborador:</td><td style="padding:8px 12px;font-weight:700;color:#0f172a;border-top:1px solid #edf2f7;">${escapeHtml(data.colaboradorNome)} ${data.colaboradorMatricula ? `<span style="color:#0080ff;font-size:12px;">(Mat: ${escapeHtml(data.colaboradorMatricula)})</span>` : ''}</td></tr>` : ''}
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0f172a;border-radius:10px;border:1px solid #334155;font-size:13px;">
+                  <tr>
+                    <td style="padding:10px 14px;color:#94a3b8;font-weight:600;width:32%;">Turma / Turno:</td>
+                    <td style="padding:10px 14px;font-weight:700;color:#ffffff;">
+                      <span style="color:${turmaConfig.color};font-weight:800;">${turmaConfig.label}</span>
+                      <span style="color:#cbd5e1;font-weight:500;">(${turmaConfig.turno} — ${turmaConfig.horario})</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 14px;color:#94a3b8;font-weight:600;border-top:1px solid #334155;">Data e Horário:</td>
+                    <td style="padding:10px 14px;font-weight:600;color:#f8fafc;border-top:1px solid #334155;">${dateFormatted}</td>
+                  </tr>
+                  ${data.colaboradorNome ? `
+                  <tr>
+                    <td style="padding:10px 14px;color:#94a3b8;font-weight:600;border-top:1px solid #334155;">Colaborador:</td>
+                    <td style="padding:10px 14px;font-weight:700;color:#ffffff;border-top:1px solid #334155;">
+                      ${escapeHtml(data.colaboradorNome)}
+                      ${data.colaboradorMatricula ? `<span style="color:#38bdf8;font-weight:700;font-size:12px;margin-left:6px;">(Mat: ${escapeHtml(data.colaboradorMatricula)})</span>` : ''}
+                    </td>
+                  </tr>` : ''}
                 </table>
               </td>
             </tr>
             <tr>
               <td style="padding:4px 20px 16px 20px;">
-                <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:8px;text-transform:uppercase;">📋 Respostas (${data.answers.length} Itens):</div>
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;border-collapse:collapse;">
-                  <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;"><th style="padding:8px 10px;text-align:left;font-size:11px;color:#475569;text-transform:uppercase;">Item</th><th style="padding:8px 10px;text-align:center;font-size:11px;color:#475569;text-transform:uppercase;width:100px;">Status</th></tr></thead>
+                <div style="font-size:13px;font-weight:800;color:#ffffff;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">📋 Respostas (${data.answers.length} Itens):</div>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0f172a;border:1px solid #334155;border-radius:10px;overflow:hidden;border-collapse:collapse;">
+                  <thead>
+                    <tr style="background-color:#070d19;border-bottom:2px solid #334155;">
+                      <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Item</th>
+                      <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;width:110px;">Status</th>
+                    </tr>
+                  </thead>
                   <tbody>${tableRows}</tbody>
                 </table>
               </td>
             </tr>
             <tr>
-              <td style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;font-size:11px;color:#94a3b8;">
-                Disparado automaticamente pelo <strong>AstroCheck</strong> &bull; Sistema de Prontidão Operacional
+              <td style="padding:14px 20px;background:#0b1329;border-top:1px solid #334155;text-align:center;font-size:11px;color:#64748b;">
+                Disparado automaticamente pelo <strong style="color:#94a3b8;">AstroCheck</strong> &bull; Sistema de Prontidão Operacional
               </td>
             </tr>
           </table>
