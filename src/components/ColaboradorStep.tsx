@@ -154,8 +154,13 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     }
   });
 
-  // Se o aparelho já tiver a digital vinculada, permanece sempre no Modo Digital!
+  // Se o usuário estiver voltando do checklist com um colaborador já preenchido (initialData),
+  // inicia direto no Modo Manual preenchido para visualização/edição.
+  // Caso contrário, se o aparelho tiver biometria salva, inicia no Modo Biométrico.
   const [mode, setMode] = useState<'biometric' | 'manual'>(() => {
+    if (initialData?.matricula) {
+      return 'manual';
+    }
     if (isMobileDevice()) {
       try {
         const item = localStorage.getItem(STORAGE_KEY);
@@ -179,6 +184,21 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [biometricFeedback, setBiometricFeedback] = useState<string | null>(null);
+
+  // Sincronização reativa quando initialData mudar ou ao retornar de outros passos
+  useEffect(() => {
+    if (initialData?.matricula) {
+      setMatricula(initialData.matricula);
+      setSearchedColaborador({
+        matricula: initialData.matricula,
+        nome: initialData.nome,
+        cargo: initialData.cargo,
+      });
+      setHasSearched(false);
+      setBiometricFeedback(null);
+      setMode('manual');
+    }
+  }, [initialData]);
 
   // BUGFIX/SEGURANÇA: se o app carrega no modo biométrico (porque há um
   // vínculo salvo neste aparelho) mas o navegador/aparelho não suporta
@@ -463,7 +483,9 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                 type="button"
                 onClick={() => {
                   setMode('manual');
-                  handleClear();
+                  if (!initialData && !matricula) {
+                    handleClear();
+                  }
                 }}
                 className="text-xs font-semibold text-[#0080ff] dark:text-[#38bdf8] hover:underline flex items-center gap-1 cursor-pointer"
               >
