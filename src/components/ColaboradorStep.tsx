@@ -389,215 +389,220 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
   const isNotFound = hasSearched && !isSearching && !searchedColaborador && matricula.trim().length > 0;
 
   return (
-    <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-colors duration-300 shadow-[0_4px_24px_rgba(32,59,139,0.12)] dark:shadow-[0_4px_28px_rgba(0,0,0,0.5)] border-[3px] border-primary/20 dark:border-[#252836] p-4 sm:p-5 flex-1 min-h-0 max-h-[580px] justify-between">
+    <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl flex flex-col relative transition-colors duration-300 shadow-[0_4px_24px_rgba(32,59,139,0.12)] dark:shadow-[0_4px_28px_rgba(0,0,0,0.5)] border-[3px] border-primary/20 dark:border-[#252836] p-3 sm:p-5 flex-1 min-h-0 max-h-[580px] overflow-hidden justify-between">
       
-      {/* Top Header com Mascote */}
-      <div className="text-center shrink-0 flex flex-col items-center">
-        <div className="relative w-14 h-14 sm:w-16 sm:h-16 mb-1.5 flex items-center justify-center bg-primary/10 dark:bg-primary/20 rounded-2xl p-1.5">
-          <img 
-            src="/astronaut_cafe.webp" 
-            alt="Mascote Astronauta AstroCheck" 
-            className="w-full h-full object-contain drop-shadow"
-          />
-          <div className="absolute -bottom-1 -right-1 bg-[#0080ff] text-white p-1 rounded-full shadow-md flex items-center justify-center">
-            <span className="material-symbols-outlined text-[13px]">
-              {mode === 'biometric' ? 'verified_user' : 'badge'}
-            </span>
-          </div>
-        </div>
-
-        <h2 className="text-base sm:text-lg font-bold text-on-surface dark:text-[#f7fafc]">
-          {mode === 'biometric' ? 'Acesso por Biometria' : 'Identificação do Tripulante'}
-        </h2>
-        <p className="text-xs text-on-surface-variant dark:text-[#94a3b8] mt-0.5 max-w-sm">
-          {mode === 'biometric'
-            ? 'Toque abaixo e valide com a biometria do celular (digital, facial ou a que estiver configurada).'
-            : isMobile 
-              ? 'Informe sua matrícula funcional para iniciar.' 
-              : 'Informe sua matrícula funcional para iniciar.'}
-        </p>
-      </div>
-
-      {/* ÁREA CENTRAL: MODO BIOMÉTRICO (DIGITAL, FACIAL OU OUTRA CONFIGURADA NO APARELHO) */}
-      {mode === 'biometric' && savedBiometric ? (
-        <div className="my-auto py-2 flex flex-col items-center gap-3.5 max-w-sm w-full mx-auto animate-fadeIn">
-          {/* Botão de Destaque para Biometria: 100% Estático, Firme e sem Piscar */}
-          <button
-            type="button"
-            onClick={handleQuickScan}
-            className="w-full max-w-[270px] py-4 px-4 bg-gradient-to-br from-[#0080ff] to-[#0055cc] hover:from-[#0070e0] hover:to-[#0048b0] text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-transform active:scale-98 cursor-pointer"
-          >
-            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
-              <span className="material-symbols-outlined text-[36px]">
-                fingerprint
+      {/* Área Rolável Interna para evitar qualquer corte de conteúdo */}
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col justify-start sm:justify-center py-0.5 sm:py-1 px-1">
+        
+        {/* Top Header com Mascote */}
+        <div className="text-center shrink-0 flex flex-col items-center mb-1 sm:mb-2">
+          <div className="relative w-11 h-11 sm:w-14 sm:h-14 mb-1 flex items-center justify-center bg-primary/10 dark:bg-primary/20 rounded-2xl p-1">
+            <img 
+              src="/astronaut_cafe.webp" 
+              alt="Mascote Astronauta AstroCheck" 
+              className="w-full h-full object-contain drop-shadow"
+            />
+            <div className="absolute -bottom-1 -right-1 bg-[#0080ff] text-white p-0.5 sm:p-1 rounded-full shadow-md flex items-center justify-center">
+              <span className="material-symbols-outlined text-[11px] sm:text-[13px]">
+                {mode === 'biometric' ? 'fingerprint' : 'badge'}
               </span>
             </div>
-            <span className="text-sm sm:text-base font-extrabold tracking-wide">
-              Toque para Entrar com Biometria
-            </span>
-          </button>
-
-          {/* Card do Tripulante Ativo */}
-          <div className="w-full max-w-[270px] p-2.5 bg-surface-container-low/60 dark:bg-[#15171e] rounded-xl border border-outline-variant/40 dark:border-[#2d3139] text-center">
-            <div className="text-[11px] text-on-surface-variant dark:text-[#94a3b8] font-medium">
-              Tripulante: <strong className="text-on-surface dark:text-[#f7fafc]">{savedBiometric.nome}</strong>
-            </div>
-            <div className="text-[11px] font-mono font-bold text-[#0080ff] mt-0.5">
-              Matrícula: {savedBiometric.matricula}
-            </div>
           </div>
 
-          {/* Feedback de erro/cancelamento */}
-          {biometricFeedback && (
-            <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 animate-fadeIn text-center px-2">
-              {biometricFeedback}
-            </div>
-          )}
-
-          {/* Links de Ação Secundária */}
-          <div className="flex flex-col items-center gap-1.5 pt-1">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('manual');
-                handleClear();
-              }}
-              className="text-xs font-semibold text-[#0080ff] dark:text-[#38bdf8] hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[15px]">edit</span>
-              <span>Digitar outra matrícula</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleUnlinkBiometric}
-              className="text-[11px] text-red-500/80 hover:text-red-600 dark:text-red-400/80 hover:underline cursor-pointer"
-              title="Desvincular biometria deste aparelho"
-            >
-              Desvincular biometria deste aparelho
-            </button>
-          </div>
+          <h2 className="text-sm sm:text-base font-bold text-on-surface dark:text-[#f7fafc]">
+            {mode === 'biometric' ? 'Acesso por Biometria' : 'Identificação do Tripulante'}
+          </h2>
+          <p className="text-[11px] sm:text-xs text-on-surface-variant dark:text-[#94a3b8] mt-0.5 max-w-sm">
+            {mode === 'biometric'
+              ? 'Toque abaixo e valide com a biometria do celular (digital, facial ou a que estiver configurada).'
+              : isMobile 
+                ? 'Informe sua matrícula funcional para iniciar.' 
+                : 'Informe sua matrícula funcional para iniciar.'}
+          </p>
         </div>
-      ) : (
-        /* ÁREA CENTRAL: MODO MANUAL (DIGITAÇÃO DE MATRÍCULA) */
-        <div className="my-auto py-1 flex flex-col items-center gap-3 max-w-sm w-full mx-auto animate-fadeIn">
 
-          {/* Campo Matrícula em Cima com Botão Buscar Embaixo */}
-          <div className="w-full flex flex-col items-center">
-            <label className="block text-xs sm:text-sm font-semibold uppercase tracking-wider text-on-surface-variant dark:text-[#94a3b8] mb-1 text-center">
-              Matrícula
-            </label>
-
-            <form onSubmit={handleSearchOrSubmit} className="w-full flex flex-col items-center gap-2">
-              {/* Input de 8 dígitos */}
-              <div className="relative w-full max-w-[260px] flex items-center">
-                <span className="absolute left-3 text-on-surface-variant dark:text-[#64748b] material-symbols-outlined text-[20px] pointer-events-none">
-                  pin
+        {/* ÁREA CENTRAL: MODO BIOMÉTRICO (DIGITAL, FACIAL OU OUTRA CONFIGURADA NO APARELHO) */}
+        {mode === 'biometric' && savedBiometric ? (
+          <div className="my-auto py-1 sm:py-2 flex flex-col items-center gap-2.5 sm:gap-3.5 max-w-sm w-full mx-auto animate-fadeIn">
+            {/* Botão de Destaque para Biometria: 100% Estático, Firme e sem Piscar */}
+            <button
+              type="button"
+              onClick={handleQuickScan}
+              className="w-full max-w-[270px] py-3 sm:py-4 px-4 bg-gradient-to-br from-[#0080ff] to-[#0055cc] hover:from-[#0070e0] hover:to-[#0048b0] text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-1.5 sm:gap-2 shadow-lg hover:shadow-xl transition-transform active:scale-98 cursor-pointer"
+            >
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
+                <span className="material-symbols-outlined text-[28px] sm:text-[36px]">
+                  fingerprint
                 </span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={8}
-                  value={matricula}
-                  onChange={handleChangeMatricula}
-                  placeholder="00000000"
-                  autoFocus
-                  className="w-full pl-10 pr-9 py-2 bg-surface-container-low/60 dark:bg-[#15171e] text-on-surface dark:text-[#f7fafc] font-mono font-bold text-lg text-center tracking-[0.22em] rounded-xl border-2 border-outline-variant/60 dark:border-[#383d4a] focus:border-primary dark:focus:border-[#0080ff] focus:outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600 shadow-inner"
-                />
-                {matricula && (
-                  <button
-                    type="button"
-                    onClick={handleClear}
-                    className="absolute right-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-1"
-                    title="Limpar"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">close</span>
-                  </button>
-                )}
               </div>
+              <span className="text-xs sm:text-sm md:text-base font-extrabold tracking-wide">
+                Toque para Entrar com Biometria
+              </span>
+            </button>
 
-              {/* Botão Buscar */}
+            {/* Card do Tripulante Ativo */}
+            <div className="w-full max-w-[270px] p-2 sm:p-2.5 bg-surface-container-low/60 dark:bg-[#15171e] rounded-xl border border-outline-variant/40 dark:border-[#2d3139] text-center">
+              <div className="text-[10px] sm:text-[11px] text-on-surface-variant dark:text-[#94a3b8] font-medium">
+                Tripulante: <strong className="text-on-surface dark:text-[#f7fafc]">{savedBiometric.nome}</strong>
+              </div>
+              <div className="text-[10px] sm:text-[11px] font-mono font-bold text-[#0080ff] mt-0.5">
+                Matrícula: {savedBiometric.matricula}
+              </div>
+            </div>
+
+            {/* Feedback de erro/cancelamento */}
+            {biometricFeedback && (
+              <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 animate-fadeIn text-center px-2">
+                {biometricFeedback}
+              </div>
+            )}
+
+            {/* Links de Ação Secundária */}
+            <div className="flex flex-col items-center gap-1 pt-0.5">
               <button
-                type="submit"
-                disabled={!matricula.trim() || isSearching}
-                className="w-full max-w-[260px] py-2 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#0080ff] hover:bg-[#0070e0] active:bg-[#005fb8] disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow"
+                type="button"
+                onClick={() => {
+                  setMode('manual');
+                  handleClear();
+                }}
+                className="text-xs font-semibold text-[#0080ff] dark:text-[#38bdf8] hover:underline flex items-center gap-1 cursor-pointer"
               >
-                {isSearching ? (
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-[18px]">search</span>
-                    <span>Buscar</span>
-                  </>
-                )}
+                <span className="material-symbols-outlined text-[14px]">edit</span>
+                <span>Digitar outra matrícula</span>
               </button>
-            </form>
+
+              <button
+                type="button"
+                onClick={handleUnlinkBiometric}
+                className="text-[10px] sm:text-[11px] text-red-500/80 hover:text-red-600 dark:text-red-400/80 hover:underline cursor-pointer"
+                title="Desvincular biometria deste aparelho"
+              >
+                Desvincular biometria deste aparelho
+              </button>
+            </div>
           </div>
+        ) : (
+          /* ÁREA CENTRAL: MODO MANUAL (DIGITAÇÃO DE MATRÍCULA) */
+          <div className="my-auto py-0.5 sm:py-1 flex flex-col items-center gap-2 sm:gap-2.5 max-w-sm w-full mx-auto animate-fadeIn">
 
-          {/* Área do Cartão Verde Reconhecido */}
-          <div className="w-full max-w-[320px]">
-            {searchedColaborador ? (
-              <div className="w-full p-3.5 bg-[#dcfce7]/70 dark:bg-[#22c55e]/15 border-2 border-[#22c55e]/50 dark:border-[#22c55e]/40 rounded-xl flex flex-col items-center text-center transition-all animate-fadeIn shadow-xs">
-                <div className="w-11 h-11 rounded-full bg-[#22c55e] text-white flex items-center justify-center mb-1 shadow-md">
-                  <span className="material-symbols-outlined text-[24px]">verified_user</span>
-                </div>
-                <div className="text-[10px] font-bold text-[#166534] dark:text-[#4ade80] uppercase tracking-wider flex items-center justify-center gap-1">
-                  <span className="material-symbols-outlined text-[13px]">check_circle</span>
-                  COLABORADOR IDENTIFICADO
-                </div>
-                <div className="text-sm sm:text-base font-black text-[#0f172a] dark:text-[#f7fafc] mt-0.5 max-w-full truncate px-2">
-                  {searchedColaborador.nome}
-                </div>
-                <div className="text-xs text-[#15803d] dark:text-[#86efac] font-semibold mt-0.5">
-                  Matrícula: <span className="tracking-wide font-mono">{searchedColaborador.matricula}</span>
-                </div>
+            {/* Campo Matrícula em Cima com Botão Buscar Embaixo */}
+            <div className="w-full flex flex-col items-center">
+              <label className="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-on-surface-variant dark:text-[#94a3b8] mb-1 text-center">
+                Matrícula
+              </label>
 
-                {/* Opção de Salvar Biometria no Aparelho (Apenas Mobile se ainda não salva) */}
-                {isMobile && !savedBiometric && (
-                  <div className="mt-2.5 pt-2 border-t border-[#22c55e]/30 w-full flex flex-col items-center">
+              <form onSubmit={handleSearchOrSubmit} className="w-full flex flex-col items-center gap-1.5 sm:gap-2">
+                {/* Input de 8 dígitos */}
+                <div className="relative w-full max-w-[260px] flex items-center">
+                  <span className="absolute left-3 text-on-surface-variant dark:text-[#64748b] material-symbols-outlined text-[18px] sm:text-[20px] pointer-events-none">
+                    pin
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={8}
+                    value={matricula}
+                    onChange={handleChangeMatricula}
+                    placeholder="00000000"
+                    autoFocus
+                    className="w-full pl-9 pr-9 py-1.5 sm:py-2 bg-surface-container-low/60 dark:bg-[#15171e] text-on-surface dark:text-[#f7fafc] font-mono font-bold text-base sm:text-lg text-center tracking-[0.22em] rounded-xl border-2 border-outline-variant/60 dark:border-[#383d4a] focus:border-primary dark:focus:border-[#0080ff] focus:outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600 shadow-inner"
+                  />
+                  {matricula && (
                     <button
                       type="button"
-                      onClick={handleLinkBiometric}
-                      className="w-full py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-[#16a34a] hover:bg-[#15803d] text-white transition-all cursor-pointer shadow-xs active:scale-95"
+                      onClick={handleClear}
+                      className="absolute right-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-1"
+                      title="Limpar"
                     >
-                      <span className="material-symbols-outlined text-[16px]">fingerprint</span>
-                      <span>Salvar Biometria neste Aparelho</span>
+                      <span className="material-symbols-outlined text-[16px] sm:text-[18px]">close</span>
                     </button>
+                  )}
+                </div>
+
+                {/* Botão Buscar */}
+                <button
+                  type="submit"
+                  disabled={!matricula.trim() || isSearching}
+                  className="w-full max-w-[260px] py-1.5 sm:py-2 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#0080ff] hover:bg-[#0070e0] active:bg-[#005fb8] disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow"
+                >
+                  {isSearching ? (
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[16px] sm:text-[18px]">search</span>
+                      <span>Buscar</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Área do Cartão Verde Reconhecido */}
+            <div className="w-full max-w-[300px]">
+              {searchedColaborador ? (
+                <div className="w-full p-2.5 sm:p-3 bg-[#dcfce7]/70 dark:bg-[#22c55e]/15 border-2 border-[#22c55e]/50 dark:border-[#22c55e]/40 rounded-xl flex flex-col items-center text-center transition-all animate-fadeIn shadow-xs">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#22c55e] text-white flex items-center justify-center mb-0.5 shadow-md">
+                    <span className="material-symbols-outlined text-[20px] sm:text-[22px]">verified_user</span>
                   </div>
-                )}
-                {biometricFeedback && (
-                  <div className="text-[11px] font-bold text-[#15803d] dark:text-[#4ade80] animate-fadeIn flex items-center gap-1 mt-1.5">
-                    <span className="material-symbols-outlined text-[14px]">check</span>
-                    <span>{biometricFeedback}</span>
+                  <div className="text-[9px] sm:text-[10px] font-bold text-[#166534] dark:text-[#4ade80] uppercase tracking-wider flex items-center justify-center gap-1">
+                    <span className="material-symbols-outlined text-[12px] sm:text-[13px]">check_circle</span>
+                    COLABORADOR IDENTIFICADO
                   </div>
-                )}
-              </div>
-            ) : isNotFound ? (
-              <div className="w-full p-3 bg-red-50 dark:bg-[#ff5252]/10 border border-red-200 dark:border-[#ff5252]/30 rounded-xl flex items-center justify-center gap-2 text-red-700 dark:text-[#ff7b7b] text-xs font-medium animate-fadeIn text-center">
-                <span className="material-symbols-outlined text-[18px] text-red-500 shrink-0">error</span>
-                <span>Matrícula não localizada no sistema.</span>
-              </div>
-            ) : null}
+                  <div className="text-xs sm:text-sm md:text-base font-black text-[#0f172a] dark:text-[#f7fafc] mt-0.5 max-w-full truncate px-2">
+                    {searchedColaborador.nome}
+                  </div>
+                  <div className="text-[11px] sm:text-xs text-[#15803d] dark:text-[#86efac] font-semibold mt-0.5">
+                    Matrícula: <span className="tracking-wide font-mono">{searchedColaborador.matricula}</span>
+                  </div>
+
+                  {/* Opção de Salvar Biometria no Aparelho (Apenas Mobile se ainda não salva) */}
+                  {isMobile && !savedBiometric && (
+                    <div className="mt-2 pt-1.5 border-t border-[#22c55e]/30 w-full flex flex-col items-center">
+                      <button
+                        type="button"
+                        onClick={handleLinkBiometric}
+                        className="w-full py-1 px-2.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 bg-[#16a34a] hover:bg-[#15803d] text-white transition-all cursor-pointer shadow-xs active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">fingerprint</span>
+                        <span>Salvar Biometria neste Aparelho</span>
+                      </button>
+                    </div>
+                  )}
+                  {biometricFeedback && (
+                    <div className="text-[10px] sm:text-[11px] font-bold text-[#15803d] dark:text-[#4ade80] animate-fadeIn flex items-center gap-1 mt-1">
+                      <span className="material-symbols-outlined text-[13px]">check</span>
+                      <span>{biometricFeedback}</span>
+                    </div>
+                  )}
+                </div>
+              ) : isNotFound ? (
+                <div className="w-full p-2.5 sm:p-3 bg-red-50 dark:bg-[#ff5252]/10 border border-red-200 dark:border-[#ff5252]/30 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-red-700 dark:text-[#ff7b7b] text-xs font-medium animate-fadeIn text-center">
+                  <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-red-500 shrink-0">error</span>
+                  <span>Matrícula não localizada no sistema.</span>
+                </div>
+              ) : null}
+            </div>
+
           </div>
+        )}
 
-        </div>
-      )}
+      </div>
 
-      {/* Botão de Ação / Iniciar Checklist (Exibido no modo manual) */}
+      {/* Botão de Ação / Iniciar Checklist (Sempre ancorado na base, sem cortes) */}
       {mode === 'manual' && (
-        <div className="shrink-0 pt-2 border-t border-outline-variant/30 dark:border-[#252836] flex justify-center w-full">
+        <div className="shrink-0 pt-2 sm:pt-2.5 border-t border-outline-variant/30 dark:border-[#252836] flex justify-center w-full mt-1">
           <button
             type="button"
             onClick={handleProceed}
             disabled={!searchedColaborador}
-            className={`w-full max-w-[260px] py-2.5 sm:py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-md ${
+            className={`w-full max-w-[260px] py-2 sm:py-2.5 md:py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-md ${
               searchedColaborador
-                ? 'bg-[#0080ff] hover:bg-[#0070e0] active:scale-98 text-white cursor-pointer hover:shadow-lg'
+                ? 'bg-[#0080ff] hover:bg-[#0070e0] active:scale-98 text-white cursor-pointer hover:shadow-lg ring-2 ring-[#0080ff]/30'
                 : 'bg-gray-200 dark:bg-[#252836] text-gray-400 dark:text-gray-500 cursor-not-allowed border border-transparent'
             }`}
           >
             <span>Iniciar Checklist</span>
-            <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">rocket_launch</span>
           </button>
         </div>
       )}
@@ -605,3 +610,4 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     </div>
   );
 };
+

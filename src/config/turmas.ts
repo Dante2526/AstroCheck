@@ -23,8 +23,8 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
     turno: 'Turno Diurno',
     horario: '07h00 às 19h00',
     periodo: 'Diurno',
-    gestorNome: 'Gestor Turma A',
-    gestorEmail: 'gestor.turma.a@empresa.com',
+    gestorNome: import.meta.env.VITE_GESTOR_NOME_A || 'Gestor Turma A',
+    gestorEmail: import.meta.env.VITE_GESTOR_EMAIL_A || import.meta.env.VITE_GESTOR_EMAIL || 'gestor.turma.a@empresa.com',
     color: '#0080ff',
     bgLight: 'rgba(0, 128, 255, 0.08)',
     bgDark: 'rgba(0, 128, 255, 0.15)',
@@ -36,8 +36,8 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
     turno: 'Turno Diurno',
     horario: '07h00 às 19h00',
     periodo: 'Diurno',
-    gestorNome: 'Gestor Turma B',
-    gestorEmail: 'gestor.turma.b@empresa.com',
+    gestorNome: import.meta.env.VITE_GESTOR_NOME_B || 'Gestor Turma B',
+    gestorEmail: import.meta.env.VITE_GESTOR_EMAIL_B || import.meta.env.VITE_GESTOR_EMAIL || 'gestor.turma.b@empresa.com',
     color: '#22c55e',
     bgLight: 'rgba(34, 197, 94, 0.08)',
     bgDark: 'rgba(34, 197, 94, 0.15)',
@@ -49,8 +49,8 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
     turno: 'Turno Noturno',
     horario: '19h00 às 07h00',
     periodo: 'Noturno',
-    gestorNome: 'Gestor Turma C',
-    gestorEmail: 'gestor.turma.c@empresa.com',
+    gestorNome: import.meta.env.VITE_GESTOR_NOME_C || 'Gestor Turma C',
+    gestorEmail: import.meta.env.VITE_GESTOR_EMAIL_C || import.meta.env.VITE_GESTOR_EMAIL || 'gestor.turma.c@empresa.com',
     color: '#f59e0b',
     bgLight: 'rgba(245, 158, 11, 0.08)',
     bgDark: 'rgba(245, 158, 11, 0.15)',
@@ -62,8 +62,8 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
     turno: 'Turno Noturno',
     horario: '19h00 às 07h00',
     periodo: 'Noturno',
-    gestorNome: 'Gestor Turma D',
-    gestorEmail: 'gestor.turma.d@empresa.com',
+    gestorNome: import.meta.env.VITE_GESTOR_NOME_D || 'Gestor Turma D',
+    gestorEmail: import.meta.env.VITE_GESTOR_EMAIL_D || import.meta.env.VITE_GESTOR_EMAIL || 'gestor.turma.d@empresa.com',
     color: '#a855f7',
     bgLight: 'rgba(168, 85, 247, 0.08)',
     bgDark: 'rgba(168, 85, 247, 0.15)',
@@ -73,17 +73,21 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
 
 export const ALL_TURMA_KEYS: TurmaKey[] = ['A', 'B', 'C', 'D'];
 
-// Configuração do EmailJS — lida exclusivamente das variáveis de ambiente.
-// BUGFIX/SEGURANÇA: valores reais de credenciais estavam hardcoded aqui como
-// fallback e ficaram expostos no histórico do repositório público. Sem a
-// env var configurada, o app cai automaticamente no "modo simulação" já
-// existente em emailService.ts (hasCredentials = false), então não é
-// necessário (nem seguro) manter um fallback com chave real.
-export const EMAILJS_SERVICE_ID = 
-  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_SERVICE_ID) || '';
+// Configuração do EmailJS (com suporte a variáveis de ambiente estáticas do Vite/Cloudflare Pages)
+export const EMAILJS_SERVICE_ID: string = 
+  import.meta.env.VITE_EMAILJS_SERVICE_ID || 
+  (import.meta.env as any).EMAILJS_SERVICE_ID || 
+  '';
 
-export const EMAILJS_TEMPLATE_ID = 
-  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_TEMPLATE_ID) || '';
+export const EMAILJS_TEMPLATE_ID: string = 
+  import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 
+  (import.meta.env as any).EMAILJS_TEMPLATE_ID || 
+  '';
 
-export const EMAILJS_PUBLIC_KEY = 
-  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_EMAILJS_PUBLIC_KEY) || '';
+export const EMAILJS_PUBLIC_KEY: string = 
+  import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 
+  (import.meta.env as any).EMAILJS_PUBLIC_KEY || 
+  import.meta.env.VITE_EMAILJS_USER_ID || 
+  (import.meta.env as any).EMAILJS_USER_ID || 
+  '';
+

@@ -399,10 +399,10 @@ export default function App() {
       : ((currentStep - 1) / (questions.length - 1)) * 100;
 
   return (
-    <div className="bg-surface-tint-light dark:bg-[#111217] h-dvh max-h-dvh flex flex-col font-body-md text-on-surface dark:text-[#f7fafc] overflow-hidden select-none transition-colors duration-300">
+    <div className="bg-surface-tint-light dark:bg-[#111217] min-h-dvh flex flex-col font-body-md text-on-surface dark:text-[#f7fafc] overflow-y-auto select-none transition-colors duration-300">
       {/* TopAppBar */}
       <header className="bg-surface dark:bg-[#15171E] border-b border-transparent dark:border-[#252836] shadow-sm shrink-0 z-40 transition-colors duration-300">
-        <div className="flex justify-between items-center px-4 pt-3.5 pb-2 sm:pt-4 sm:pb-2.5 w-full max-w-2xl mx-auto min-h-[54px] sm:min-h-[58px]">
+        <div className="flex justify-between items-center px-3 sm:px-4 pt-2.5 pb-1.5 sm:pt-3.5 sm:pb-2 w-full max-w-2xl mx-auto min-h-[48px] sm:min-h-[58px]">
           {/* Lado Esquerdo: Espaçador equilibrado com botão sutil de retorno se ativo */}
           <div className="w-9 sm:w-10 flex items-center justify-start">
             {colaborador && !isColaboradorStep && (
@@ -419,12 +419,12 @@ export default function App() {
           
           {/* Título AstroCheck + Escudo + Subtítulo Perfeitamente Centralizados */}
           <div className="flex-1 text-center flex flex-col items-center justify-center px-1">
-            <h1 className="text-base sm:text-lg font-bold text-primary dark:text-[#f7fafc] flex items-center justify-center gap-1.5 transition-colors duration-300">
+            <h1 className="text-sm sm:text-lg font-bold text-primary dark:text-[#f7fafc] flex items-center justify-center gap-1.5 transition-colors duration-300">
               <span>AstroCheck</span>
               
               {/* Selo / Escudo de Verificação Verde */}
               <span className="inline-flex items-center justify-center transition-transform duration-300 hover:scale-115 cursor-pointer" title="Verificado AstroCheck">
-                <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px] drop-shadow-[0_2px_6px_rgba(34,197,94,0.45)]" viewBox="0 0 24 24" fill="none">
+                <svg className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px] drop-shadow-[0_2px_6px_rgba(34,197,94,0.45)]" viewBox="0 0 24 24" fill="none">
                   <defs>
                     <linearGradient id="astroShieldGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
                       <stop offset="0%" stopColor="#22c55e" />
@@ -463,7 +463,7 @@ export default function App() {
                 </svg>
               </span>
             </h1>
-            <span className="text-[11px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] font-medium transition-colors duration-300 block truncate max-w-full">
+            <span className="text-[10px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] font-medium transition-colors duration-300 block truncate max-w-full">
               {isColaboradorStep ? (
                 <span className="text-[#0080ff] dark:text-[#0080ff] font-bold">Identificação de Tripulante</span>
               ) : isTurmaStep ? (
@@ -495,7 +495,7 @@ export default function App() {
         </div>
 
         {/* Railway Progress Bar with Locomotive & Clean Transparent Milestones */}
-        <div className="w-full max-w-2xl mx-auto px-5 pb-2 pt-6 sm:pt-7 relative">
+        <div className="w-full max-w-2xl mx-auto px-4 sm:px-5 pb-1.5 sm:pb-2 pt-4 sm:pt-6 relative">
           <div className="relative w-full h-1.5 sm:h-2 bg-surface-container-highest/70 dark:bg-[#252836] rounded-full">
             {/* Fill Progress Bar */}
             <div 
@@ -537,7 +537,7 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-h-0 flex flex-col justify-center items-center px-3 sm:px-6 py-2 sm:py-3.5 w-full max-w-xl mx-auto">
+      <main className="flex-1 min-h-0 flex flex-col justify-center items-center px-2.5 sm:px-6 py-2 sm:py-3.5 w-full max-w-xl mx-auto">
         {isColaboradorStep ? (
           /* Etapa 0: Identificação do Colaborador por Matrícula */
           <ColaboradorStep
@@ -565,10 +565,10 @@ export default function App() {
             <div className={`w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 shadow-[0_4px_20px_rgba(32,59,139,0.10)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-[3px] sm:border-[4px] ${cardBorderClass} p-3 sm:p-5 flex-1 min-h-0 max-h-[500px] sm:max-h-[560px] justify-between`}>
               
               {/* Image Illustration */}
-              <div className="flex-1 min-h-[120px] sm:min-h-[170px] max-h-[180px] sm:max-h-[220px] flex justify-center items-center py-1 sm:py-2 bg-surface-container-low/40 dark:bg-[#171922]/60 rounded-xl transition-colors duration-300">
+              <div className="flex-1 min-h-[90px] sm:min-h-[140px] max-h-[160px] sm:max-h-[220px] flex justify-center items-center py-1 sm:py-2 bg-surface-container-low/40 dark:bg-[#171922]/60 rounded-xl transition-colors duration-300">
                 <img 
                   alt={question.imageAlt} 
-                  className="h-full max-h-[140px] sm:max-h-[195px] w-auto object-contain transition-transform duration-300 hover:scale-105" 
+                  className="h-full max-h-[120px] sm:max-h-[195px] w-auto object-contain transition-transform duration-300 hover:scale-105" 
                   src={question.image} 
                   style={{ filter: isDarkMode ? 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.12))' }}
                 />
@@ -576,7 +576,7 @@ export default function App() {
 
               {/* Question Text */}
               <div className="my-1.5 sm:my-2.5 text-center px-1 sm:px-2 flex flex-col items-center justify-center">
-                <h2 className={`font-semibold text-on-surface dark:text-[#f7fafc] min-h-[44px] sm:min-h-[52px] flex items-center justify-center transition-colors duration-300 ${
+                <h2 className={`font-semibold text-on-surface dark:text-[#f7fafc] min-h-[38px] sm:min-h-[52px] flex items-center justify-center transition-colors duration-300 ${
                   question.text.length > 110 
                     ? 'text-[12px] sm:text-[14px] md:text-[15px] leading-snug sm:leading-normal max-w-lg' 
                     : 'text-xs sm:text-base leading-snug'
@@ -586,11 +586,11 @@ export default function App() {
               </div>
 
               {/* Action Buttons (Sim / Não) */}
-              <div className="flex w-full gap-2.5 sm:gap-4 shrink-0 pt-1">
+              <div className="flex w-full gap-2 sm:gap-4 shrink-0 pt-0.5 sm:pt-1">
                 {/* Sim Button */}
                 <button
                   onClick={() => handleAnswer('yes')}
-                  className={`flex-1 py-2.5 sm:py-3.5 px-3 sm:px-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden active:scale-98 cursor-pointer ${
+                  className={`flex-1 py-2 sm:py-3.5 px-3 sm:px-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden active:scale-98 cursor-pointer ${
                     selectedAnswer === 'yes'
                       ? isYesSafe
                         ? 'bg-[#22c55e]/15 dark:bg-[#22c55e]/20 border-[#22c55e] dark:border-[#22c55e] text-[#15803d] dark:text-[#4ade80] font-bold shadow-sm'
@@ -600,16 +600,16 @@ export default function App() {
                         : 'border-outline-variant dark:border-[#383d4a] text-on-surface dark:text-[#f7fafc] hover:bg-error-container/40 dark:hover:bg-[#ff5252]/15 hover:text-on-error-container dark:hover:text-[#ff7b7b] hover:border-error/60 dark:hover:border-[#ff5252] font-medium'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]" style={{ fontVariationSettings: selectedAnswer === 'yes' ? "'FILL' 1" : "'FILL' 0" }}>
+                  <span className="material-symbols-outlined text-[18px] sm:text-[22px]" style={{ fontVariationSettings: selectedAnswer === 'yes' ? "'FILL' 1" : "'FILL' 0" }}>
                     {isYesSafe ? 'check_circle' : 'cancel'}
                   </span>
-                  <span className="text-sm sm:text-base">Sim</span>
+                  <span className="text-xs sm:text-base">Sim</span>
                 </button>
 
                 {/* Não Button */}
                 <button
                   onClick={() => handleAnswer('no')}
-                  className={`flex-1 py-2.5 sm:py-3.5 px-3 sm:px-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden active:scale-98 cursor-pointer ${
+                  className={`flex-1 py-2 sm:py-3.5 px-3 sm:px-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden active:scale-98 cursor-pointer ${
                     selectedAnswer === 'no'
                       ? !isYesSafe
                         ? 'bg-[#22c55e]/15 dark:bg-[#22c55e]/20 border-[#22c55e] dark:border-[#22c55e] text-[#15803d] dark:text-[#4ade80] font-bold shadow-sm'
@@ -619,19 +619,19 @@ export default function App() {
                         : 'border-outline-variant dark:border-[#383d4a] text-on-surface dark:text-[#f7fafc] hover:bg-error-container/40 dark:hover:bg-[#ff5252]/15 hover:text-on-error-container dark:hover:text-[#ff7b7b] hover:border-error/60 dark:hover:border-[#ff5252] font-medium'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]" style={{ fontVariationSettings: selectedAnswer === 'no' ? "'FILL' 1" : "'FILL' 0" }}>
+                  <span className="material-symbols-outlined text-[18px] sm:text-[22px]" style={{ fontVariationSettings: selectedAnswer === 'no' ? "'FILL' 1" : "'FILL' 0" }}>
                     {!isYesSafe ? 'check_circle' : 'cancel'}
                   </span>
-                  <span className="text-sm sm:text-base">Não</span>
+                  <span className="text-xs sm:text-base">Não</span>
                 </button>
               </div>
             </div>
 
             {/* Navigation Controls (Anterior / Avançar) */}
-            <div className="w-full flex justify-between items-center mt-2.5 sm:mt-4 shrink-0 px-1">
+            <div className="w-full flex justify-between items-center mt-2 sm:mt-4 shrink-0 px-1">
               <button 
                 onClick={handlePrev}
-                className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 px-5 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-4 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_back</span>
                 <span>Voltar</span>
@@ -640,7 +640,7 @@ export default function App() {
               <button 
                 onClick={handleNext} 
                 disabled={selectedAnswer === null || selectedAnswer === undefined}
-                className="bg-[#ff6b00] hover:bg-[#ea580c] active:bg-[#c2410c] dark:bg-[#ff7a00] dark:hover:bg-[#ea580c] text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 px-5 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="bg-[#ff6b00] hover:bg-[#ea580c] active:bg-[#c2410c] dark:bg-[#ff7a00] dark:hover:bg-[#ea580c] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-4 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 <span>{currentStep === questions.length ? 'Finalizar' : 'Avançar'}</span>
                 <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_forward</span>

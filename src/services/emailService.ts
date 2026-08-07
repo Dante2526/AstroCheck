@@ -1,4 +1,4 @@
-// src/services/emailService.ts
+import emailjs from '@emailjs/browser';
 import { 
   TurmaKey, 
   TURMAS, 
@@ -233,15 +233,28 @@ export async function sendReadinessEmail(
   const html_content = buildReadinessEmailHtml(data);
   const subject = `AstroCheck Prontidão — ${turmaConfig.label} — ${new Date(data.timestamp).toLocaleDateString('pt-BR')}`;
 
-  const templateParams = {
+  const templateParams: Record<string, any> = {
     html_content,
+    message_html: html_content,
+    message: html_content,
+    content: html_content,
     subject,
     turma: turmaConfig.label,
+    turma_nome: turmaConfig.label,
     gestor_nome: turmaConfig.gestorNome,
     gestor_email: turmaConfig.gestorEmail,
     to_email: turmaConfig.gestorEmail,
+    to_name: turmaConfig.gestorNome,
+    reply_to: turmaConfig.gestorEmail,
+    email: turmaConfig.gestorEmail,
+    recipient: turmaConfig.gestorEmail,
+    colaborador_nome: data.colaboradorNome || 'Colaborador',
+    colaborador_matricula: data.colaboradorMatricula || 'N/I',
+    colaborador_cargo: data.colaboradorCargo || '',
     data_envio: new Date(data.timestamp).toLocaleString('pt-BR'),
+    data_hora: new Date(data.timestamp).toLocaleString('pt-BR'),
     total_riscos: data.totalRisks,
+    status_aptidao: data.totalRisks === 0 ? '100% APTO' : `${data.totalRisks} Ponto(s) de Risco`,
   };
 
   const hasCredentials = Boolean(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY);
@@ -249,9 +262,6 @@ export async function sendReadinessEmail(
   for (let attempt = 0; attempt <= retryCount; attempt++) {
     try {
       if (hasCredentials) {
-        // Carrega o SDK do EmailJS dinamicamente sob demanda (0kb no bundle inicial)
-        const emailjs = (await import('@emailjs/browser')).default;
-
         // Timeout Promise de 10 segundos para não prender a interface
         const sendPromise = emailjs.send(
           EMAILJS_SERVICE_ID,
@@ -292,10 +302,11 @@ export async function sendReadinessEmail(
 
       // Se falhar após retry, salva backup local para não perder os dados
       saveLocalBackup(data, 'pending');
+      const errDetail = error?.text || error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
       return {
         success: false,
         isOfflineSaved: true,
-        message: `Instabilidade na rede. Os dados foram salvos com segurança no dispositivo. Erro: ${error?.text || error?.message || 'Falha de conexão'}`,
+        message: `Falha no envio de e-mail: ${errDetail || 'Erro de conexão'}. O relatório foi salvo no dispositivo.`,
         error,
       };
     }

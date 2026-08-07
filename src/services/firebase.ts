@@ -52,6 +52,7 @@ export interface FirestoreColaborador {
 }
 
 const PRIMARY_COLLECTIONS = [
+  'administrators',
   'turma a',
   'turma b',
   'turma c',
@@ -204,6 +205,16 @@ if (typeof window !== 'undefined' && isFirebaseConfigured) {
   ensureFirebaseAuth().catch(() => {});
 }
 
+function extractColaboradorData(data: Record<string, any>, docId: string, colName: string): FirestoreColaborador {
+  const isAdm = colName.toLowerCase() === 'administrators';
+  return {
+    matricula: String(data.matricula || data.Matricula || docId),
+    nome: String(data.nome || data.Nome || data.name || data.Name || data.displayName || (isAdm ? 'Administrador' : 'Colaborador')),
+    cargo: String(data.cargo || data.Cargo || data.funcao || data.Funcao || data.role || data.Role || (isAdm ? 'Administrador' : '')),
+    turma: String(data.turma || data.Turma || (isAdm ? 'Administração' : colName)),
+  };
+}
+
 async function searchInCollections(
   collections: string[],
   possibleKeys: string[]
@@ -217,13 +228,7 @@ async function searchInCollections(
         const docRef = doc(db!, colName, key);
         const snap = await getDoc(docRef);
         if (snap.exists()) {
-          const data = snap.data();
-          const colab: FirestoreColaborador = {
-            matricula: String(data.matricula || data.Matricula || snap.id),
-            nome: String(data.nome || data.Nome || data.name || data.Name || 'Colaborador'),
-            cargo: String(data.cargo || data.Cargo || data.funcao || data.Funcao || ''),
-            turma: String(data.turma || data.Turma || colName),
-          };
+          const colab = extractColaboradorData(snap.data(), snap.id, colName);
           cacheColaborador(colab);
           return colab;
         }
@@ -245,13 +250,7 @@ async function searchInCollections(
       const snap = await getDocs(q);
       if (!snap.empty) {
         const docSnap = snap.docs[0];
-        const data = docSnap.data();
-        const colab: FirestoreColaborador = {
-          matricula: String(data.matricula || data.Matricula || docSnap.id),
-          nome: String(data.nome || data.Nome || data.name || data.Name || 'Colaborador'),
-          cargo: String(data.cargo || data.Cargo || data.funcao || data.Funcao || ''),
-          turma: String(data.turma || data.Turma || colName),
-        };
+        const colab = extractColaboradorData(docSnap.data(), docSnap.id, colName);
         cacheColaborador(colab);
         return colab;
       }
