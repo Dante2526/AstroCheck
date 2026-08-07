@@ -91,3 +91,11 @@ export const EMAILJS_PUBLIC_KEY: string =
   (import.meta.env as any).EMAILJS_USER_ID || 
   '';
 
+// Webhook Google Apps Script (Gmail oficial: 500 a 1.500 envios/dia gratuitos)
+export const GOOGLE_SCRIPT_URL: string = 
+  import.meta.env.VITE_GOOGLE_SCRIPT_URL || 
+  import.meta.env.VITE_EMAIL_WEBHOOK_URL || 
+  (import.meta.env as any).GOOGLE_SCRIPT_URL || 
+  '';
+
+

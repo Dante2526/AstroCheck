@@ -4,7 +4,8 @@ import {
   TURMAS, 
   EMAILJS_SERVICE_ID, 
   EMAILJS_TEMPLATE_ID, 
-  EMAILJS_PUBLIC_KEY 
+  EMAILJS_PUBLIC_KEY,
+  GOOGLE_SCRIPT_URL
 } from '../config/turmas';
 
 export interface ReadinessAnswerItem {
@@ -210,7 +211,7 @@ function saveLocalBackup(data: ReadinessReportData, status: 'sent' | 'pending') 
 }
 
 /**
- * Dispara o e-mail para o gestor com Timeout, Auto-Retry e Payload Ultra-Otimizado (< 10KB total).
+ * Dispara o e-mail para o gestor via Google Apps Script (Gmail) ou EmailJS com Auto-Retry e Backup Offline.
  */
 export async function sendReadinessEmail(
   data: ReadinessReportData,
@@ -222,7 +223,76 @@ export async function sendReadinessEmail(
   const dateFormatted = new Date(data.timestamp).toLocaleString('pt-BR');
   const subject = `AstroCheck Prontidão — ${turmaConfig.label} — ${new Date(data.timestamp).toLocaleDateString('pt-BR')}`;
 
-  // Payload otimizado: cada variável serve aos formatos mais comuns de template do EmailJS sem duplicatas excessivas
+  const hasGoogleScript = Boolean(GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim().startsWith('http'));
+  const hasEmailJS = Boolean(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY);
+
+  // 1. DISPARO VIA GOOGLE APPS SCRIPT (GMAIL OFICIAL - 500 A 1.500 ENVIOS/DIA GRATUITOS)
+  if (hasGoogleScript) {
+    const payload = {
+      to: turmaConfig.gestorEmail,
+      to_name: turmaConfig.gestorNome,
+      subject,
+      html: html_content,
+      text: text_content,
+      turma: turmaConfig.label,
+      colaborador_nome: data.colaboradorNome || 'Colaborador',
+      colaborador_matricula: data.colaboradorMatricula || 'N/I',
+      colaborador_cargo: data.colaboradorCargo || '',
+      data_hora: dateFormatted,
+      total_riscos: data.totalRisks,
+      status_aptidao: data.totalRisks === 0 ? '100% APTO' : `${data.totalRisks} Ponto(s) de Risco`,
+    };
+
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+        try {
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        saveLocalBackup(data, 'sent');
+        console.log(`[AstroCheck] E-mail enviado com sucesso via Gmail (Google Apps Script) para ${turmaConfig.gestorEmail}`);
+        return {
+          success: true,
+          message: `Relatório enviado com sucesso via Gmail para ${turmaConfig.gestorEmail} (${turmaConfig.label})!`,
+        };
+      } catch (error: any) {
+        console.warn(`[AstroCheck] Tentativa ${attempt + 1} Google Apps Script falhou:`, error);
+        if (attempt < retryCount) {
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          continue;
+        }
+
+        // Se falhar e tiver EmailJS configurado, tenta EmailJS como fallback
+        if (hasEmailJS) {
+          console.log('[AstroCheck] Tentando fallback para EmailJS...');
+          break;
+        }
+
+        saveLocalBackup(data, 'pending');
+        return {
+          success: false,
+          isOfflineSaved: true,
+          message: `Falha no envio via Gmail: ${error?.message || 'Erro de conexão'}. O relatório foi salvo no dispositivo.`,
+          error,
+        };
+      }
+    }
+  }
+
+  // 2. DISPARO VIA EMAILJS (OU MODO SIMULAÇÃO)
   const templateParams: Record<string, any> = {
     message_html: html_content,
     message: html_content,
@@ -243,12 +313,9 @@ export async function sendReadinessEmail(
     status_aptidao: data.totalRisks === 0 ? '100% APTO' : `${data.totalRisks} Ponto(s) de Risco`,
   };
 
-  const hasCredentials = Boolean(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY);
-
   for (let attempt = 0; attempt <= retryCount; attempt++) {
     try {
-      if (hasCredentials) {
-        // Timeout Promise de 10 segundos para não prender a interface
+      if (hasEmailJS) {
         const sendPromise = emailjs.send(
           EMAILJS_SERVICE_ID,
           EMAILJS_TEMPLATE_ID,
@@ -263,14 +330,13 @@ export async function sendReadinessEmail(
         await Promise.race([sendPromise, timeoutPromise]);
         
         saveLocalBackup(data, 'sent');
-        console.log(`[AstroCheck] E-mail enviado com sucesso para ${turmaConfig.gestorEmail} (${turmaConfig.label})`);
+        console.log(`[AstroCheck] E-mail enviado com sucesso via EmailJS para ${turmaConfig.gestorEmail} (${turmaConfig.label})`);
         return {
           success: true,
           message: `Relatório enviado com sucesso para o Gestor da ${turmaConfig.label} (${turmaConfig.gestorEmail})!`,
         };
       } else {
-        // Fallback Simulação segura
-        console.warn('[AstroCheck] EmailJS em modo simulação:', templateParams);
+        console.warn('[AstroCheck] Modo simulação (sem Google Script ou EmailJS configurado):', templateParams);
         await new Promise(resolve => setTimeout(resolve, 600));
         saveLocalBackup(data, 'sent');
         return {
@@ -279,14 +345,12 @@ export async function sendReadinessEmail(
         };
       }
     } catch (error: any) {
-      console.warn(`[AstroCheck] Tentativa ${attempt + 1} falhou:`, error);
+      console.warn(`[AstroCheck] Tentativa ${attempt + 1} EmailJS falhou:`, error);
       if (attempt < retryCount) {
-        // Espera 1.2s antes de tentar novamente (backoff)
         await new Promise(resolve => setTimeout(resolve, 1200));
         continue;
       }
 
-      // Se falhar após retry, salva backup local para não perder os dados
       saveLocalBackup(data, 'pending');
       const errDetail = error?.text || error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
       return {
