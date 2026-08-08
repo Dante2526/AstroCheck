@@ -102,7 +102,7 @@ export const getQuestions = (date: Date = new Date()) => [
   },
   {
     id: 5,
-    image: '/ljjj1000215839-Photoroom.webp',
+    image: '/astronaut_medicamento.webp',
     imageAlt: 'Mascote astronauta com medicamento',
     text: 'Tem utilizado algum medicamento que pode ter alterando seu estado de consciência, foco e concentração?',
     safeAnswer: 'no' as const,
