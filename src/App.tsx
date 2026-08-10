@@ -631,16 +631,23 @@ export default function App() {
             <div className="w-full flex justify-between items-center mt-2 sm:mt-4 shrink-0 px-1">
               <button 
                 onClick={handlePrev}
-                className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-4 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-4 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
               >
                 <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_back</span>
                 <span>Voltar</span>
               </button>
 
+              {/* Tag Desenvolvido por NEAR */}
+              <div className="flex-1 flex justify-center px-1.5 min-w-0">
+                <div className="bg-surface-container-lowest dark:bg-[#1E2029] rounded-full px-2 sm:px-4 py-1 sm:py-1.5 shadow-sm text-center text-[7px] min-[375px]:text-[9px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] transition-colors whitespace-nowrap border border-transparent dark:border-[#2d3139] truncate">
+                  <span className="font-bold opacity-70 tracking-wider">DESENVOLVIDO POR NEAR</span>
+                </div>
+              </div>
+
               <button 
                 onClick={handleNext} 
                 disabled={selectedAnswer === null || selectedAnswer === undefined}
-                className="bg-[#ff6b00] hover:bg-[#ea580c] active:bg-[#c2410c] dark:bg-[#ff7a00] dark:hover:bg-[#ea580c] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-4 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="bg-[#ff6b00] hover:bg-[#ea580c] active:bg-[#c2410c] dark:bg-[#ff7a00] dark:hover:bg-[#ea580c] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-4 sm:px-7 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
               >
                 <span>{currentStep === questions.length ? 'Finalizar' : 'Avançar'}</span>
                 <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_forward</span>
