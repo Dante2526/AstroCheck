@@ -565,10 +565,10 @@ export default function App() {
             <div className={`w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 shadow-[0_4px_20px_rgba(32,59,139,0.10)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-[3px] sm:border-[4px] ${cardBorderClass} p-3 sm:p-5 flex-1 min-h-0 max-h-[500px] sm:max-h-[560px] justify-between`}>
               
               {/* Image Illustration */}
-              <div className="flex-1 min-h-[90px] sm:min-h-[140px] max-h-[160px] sm:max-h-[220px] flex justify-center items-center py-1 sm:py-2 bg-surface-container-low/40 dark:bg-[#171922]/60 rounded-xl transition-colors duration-300">
+              <div className="w-full flex-1 min-h-[90px] sm:min-h-[140px] max-h-[160px] sm:max-h-[220px] flex justify-center items-center py-1 sm:py-2 bg-surface-container-low/40 dark:bg-[#171922]/60 rounded-xl transition-colors duration-300">
                 <img 
                   alt={question.imageAlt} 
-                  className="h-full max-h-[120px] sm:max-h-[195px] w-auto object-contain transition-transform duration-300 hover:scale-105" 
+                  className="h-full max-h-[120px] sm:max-h-[195px] w-auto mx-auto block object-contain transition-transform duration-300 hover:scale-105" 
                   src={question.image} 
                   style={{ filter: isDarkMode ? 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.12))' }}
                 />
