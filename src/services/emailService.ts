@@ -348,7 +348,15 @@ export async function sendReadinessEmail(
           }
           
           const resultData = await response.json().catch(() => null);
-          if (resultData && resultData.status === 'error') {
+          // BUGFIX: se a resposta não for um JSON válido (ex: o Google
+          // devolveu uma página HTML de autorização por causa de um deploy
+          // com permissão errada), `resultData` fica null e a checagem de
+          // erro abaixo era pulada — o envio era considerado sucesso mesmo
+          // sem confirmação real de que o e-mail saiu.
+          if (!resultData) {
+            throw new Error('Resposta inesperada do Apps Script (não é JSON válido — verifique a implantação/permissões).');
+          }
+          if (resultData.status === 'error') {
             throw new Error(`Erro do Script: ${resultData.message}`);
           }
 
