@@ -6,7 +6,6 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
-    envPrefix: ['VITE_', 'EMAILJS_', 'FIREBASE_'],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

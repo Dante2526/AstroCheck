@@ -88,7 +88,7 @@ export const getQuestions = (date: Date = new Date()) => [
   },
   {
     id: 3,
-    image: '/100000. de 2026, 16_27_57.webp',
+    image: '/astronaut_trabalho.webp',
     imageAlt: 'Mascote astronauta no ambiente de trabalho',
     text: 'Tem algum desconforto no ambiente de trabalho que pode estar deixando você insatisfeito angustiado ou sem concentração?',
     safeAnswer: 'no' as const,
@@ -207,7 +207,7 @@ export default function App() {
   useEffect(() => {
     const imagesToPreload = [
       ...questions.map(q => q.image),
-      '/100000. de 2026, 16_27_57.webp',
+      '/astronaut_trabalho.webp',
       '/astronaut_confortavel.webp',
       '/file_0000000059b0820e9a6113802390edd4.webp',
     ];
@@ -543,7 +543,6 @@ export default function App() {
           <ColaboradorStep
             onConfirm={handleConfirmColaborador}
             initialData={colaborador}
-            isDarkMode={isDarkMode}
           />
         ) : isTurmaStep ? (
           /* Etapa Final: Seleção de Turma e Envio */

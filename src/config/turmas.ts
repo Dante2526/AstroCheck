@@ -73,23 +73,6 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
 
 export const ALL_TURMA_KEYS: TurmaKey[] = ['A', 'B', 'C', 'D'];
 
-// Configuração do EmailJS (com suporte a variáveis de ambiente estáticas do Vite/Cloudflare Pages)
-export const EMAILJS_SERVICE_ID: string = 
-  import.meta.env.VITE_EMAILJS_SERVICE_ID || 
-  (import.meta.env as any).EMAILJS_SERVICE_ID || 
-  '';
-
-export const EMAILJS_TEMPLATE_ID: string = 
-  import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 
-  (import.meta.env as any).EMAILJS_TEMPLATE_ID || 
-  '';
-
-export const EMAILJS_PUBLIC_KEY: string = 
-  import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 
-  (import.meta.env as any).EMAILJS_PUBLIC_KEY || 
-  import.meta.env.VITE_EMAILJS_USER_ID || 
-  (import.meta.env as any).EMAILJS_USER_ID || 
-  '';
 
 // Webhook Google Apps Script (Gmail oficial: 500 a 1.500 envios/dia gratuitos)
 export const GOOGLE_SCRIPT_URL: string = 

@@ -5,7 +5,6 @@ import { findColaboradorInFirestore, getCachedColaborador } from '../services/fi
 interface ColaboradorStepProps {
   onConfirm: (colaborador: { matricula: string; nome: string; cargo?: string }) => void;
   initialData?: { matricula: string; nome: string; cargo?: string } | null;
-  isDarkMode: boolean;
 }
 
 interface SavedBiometric {

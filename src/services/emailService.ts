@@ -1,10 +1,6 @@
-import emailjs from '@emailjs/browser';
 import { 
   TurmaKey, 
   TURMAS, 
-  EMAILJS_SERVICE_ID, 
-  EMAILJS_TEMPLATE_ID, 
-  EMAILJS_PUBLIC_KEY,
   GOOGLE_SCRIPT_URL
 } from '../config/turmas';
 
@@ -284,9 +280,8 @@ export async function sendReadinessEmail(
   const subject = `AstroCheck Prontidão — ${turmaConfig.label} — ${new Date(data.timestamp).toLocaleDateString('pt-BR')}`;
 
   const hasGoogleScript = Boolean(GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim().startsWith('http'));
-  const hasEmailJS = Boolean(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY);
 
-  // 1. DISPARO VIA GOOGLE APPS SCRIPT (GMAIL OFICIAL - 500 A 1.500 ENVIOS/DIA GRATUITOS)
+  // DISPARO VIA GOOGLE APPS SCRIPT (GMAIL OFICIAL - 500 A 1.500 ENVIOS/DIA GRATUITOS)
   if (hasGoogleScript) {
     const payload = {
       to: turmaConfig.gestorEmail,
@@ -303,128 +298,91 @@ export async function sendReadinessEmail(
       status_aptidao: data.totalRisks === 0 ? '100% APTO' : `${data.totalRisks} Ponto(s) de Risco`,
     };
 
-    for (let attempt = 0; attempt <= retryCount; attempt++) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-        try {
-          await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify(payload),
-            signal: controller.signal,
-          });
-        } finally {
-          clearTimeout(timeoutId);
-        }
-
-        saveLocalBackup(data, 'sent');
-        console.log(`[AstroCheck] E-mail enviado com sucesso via Gmail (Google Apps Script) para ${turmaConfig.gestorEmail}`);
-        return {
-          success: true,
-          message: `Relatório enviado com sucesso via Gmail para ${turmaConfig.gestorEmail} (${turmaConfig.label})!`,
-        };
-      } catch (error: any) {
-        console.warn(`[AstroCheck] Tentativa ${attempt + 1} Google Apps Script falhou:`, error);
-        if (attempt < retryCount) {
-          await new Promise(resolve => setTimeout(resolve, 1200));
-          continue;
-        }
-
-        // Se falhar e tiver EmailJS configurado, tenta EmailJS como fallback
-        if (hasEmailJS) {
-          console.log('[AstroCheck] Tentando fallback para EmailJS...');
-          break;
-        }
-
-        saveLocalBackup(data, 'pending');
-        return {
-          success: false,
-          isOfflineSaved: true,
-          message: `Falha no envio via Gmail: ${error?.message || 'Erro de conexão'}. O relatório foi salvo no dispositivo.`,
-          error,
-        };
-      }
-    }
-  }
-
-  // 2. DISPARO VIA EMAILJS (OU MODO SIMULAÇÃO)
-  const templateParams: Record<string, any> = {
-    message_html: html_content,
-    message: html_content,
-    html_content: html_content,
-    message_text: text_content,
-    subject,
-    turma: turmaConfig.label,
-    turma_nome: turmaConfig.label,
-    gestor_nome: turmaConfig.gestorNome,
-    gestor_email: turmaConfig.gestorEmail,
-    to_email: turmaConfig.gestorEmail,
-    to_name: turmaConfig.gestorNome,
-    colaborador_nome: data.colaboradorNome || 'Colaborador',
-    colaborador_matricula: data.colaboradorMatricula || 'N/I',
-    colaborador_cargo: data.colaboradorCargo || '',
-    data_hora: dateFormatted,
-    total_riscos: data.totalRisks,
-    status_aptidao: data.totalRisks === 0 ? '100% APTO' : `${data.totalRisks} Ponto(s) de Risco`,
-  };
-
-  for (let attempt = 0; attempt <= retryCount; attempt++) {
+    // Ping CORS pre-flight para validar se podemos ler a resposta com segurança
+    let corsEnabled = false;
     try {
-      if (hasEmailJS) {
-        const sendPromise = emailjs.send(
-          EMAILJS_SERVICE_ID,
-          EMAILJS_TEMPLATE_ID,
-          templateParams,
-          EMAILJS_PUBLIC_KEY
-        );
-
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Tempo limite de conexão excedido (10s)')), 10000)
-        );
-
-        await Promise.race([sendPromise, timeoutPromise]);
-        
-        saveLocalBackup(data, 'sent');
-        console.log(`[AstroCheck] E-mail enviado com sucesso via EmailJS para ${turmaConfig.gestorEmail} (${turmaConfig.label})`);
-        return {
-          success: true,
-          message: `Relatório enviado com sucesso para o Gestor da ${turmaConfig.label} (${turmaConfig.gestorEmail})!`,
-        };
-      } else {
-        console.warn('[AstroCheck] Modo simulação (sem Google Script ou EmailJS configurado):', templateParams);
-        await new Promise(resolve => setTimeout(resolve, 600));
-        saveLocalBackup(data, 'sent');
-        return {
-          success: true,
-          message: `Relatório processado para o Gestor da ${turmaConfig.label}! (Modo Simulação)`,
-        };
+      const pingController = new AbortController();
+      const pingTimeoutId = setTimeout(() => pingController.abort(), 3500);
+      const pingRes = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'GET',
+        signal: pingController.signal,
+      });
+      clearTimeout(pingTimeoutId);
+      if (pingRes.ok) {
+        corsEnabled = true;
       }
-    } catch (error: any) {
-      console.warn(`[AstroCheck] Tentativa ${attempt + 1} EmailJS falhou:`, error);
-      if (attempt < retryCount) {
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        continue;
-      }
+    } catch (pingErr) {
+      console.warn('[AstroCheck] Ping do Apps Script falhou (rede ou CORS). Abortando modo Gmail.');
+    }
 
+    if (!corsEnabled) {
+      console.warn('[AstroCheck] Sem CORS no GAS, falhando envio imediatamente (CORS Bloqueado/Rede).');
       saveLocalBackup(data, 'pending');
-      const errDetail = error?.text || error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
       return {
         success: false,
         isOfflineSaved: true,
-        message: `Falha no envio de e-mail: ${errDetail || 'Erro de conexão'}. O relatório foi salvo no dispositivo.`,
-        error,
+        message: 'Falha no envio via Gmail (Conexão ou CORS bloqueado). Relatório salvo no dispositivo para envio posterior.',
       };
+    } else {
+      for (let attempt = 0; attempt <= retryCount; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
+          
+          let response;
+          try {
+            response = await fetch(GOOGLE_SCRIPT_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+              },
+              body: JSON.stringify(payload),
+              signal: controller.signal,
+            });
+          } finally {
+            clearTimeout(timeoutId);
+          }
+
+          if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+          }
+          
+          const resultData = await response.json().catch(() => null);
+          if (resultData && resultData.status === 'error') {
+            throw new Error(`Erro do Script: ${resultData.message}`);
+          }
+
+          saveLocalBackup(data, 'sent');
+          console.log(`[AstroCheck] E-mail enviado com sucesso via Gmail (Google Apps Script) para ${turmaConfig.gestorEmail}`);
+          return {
+            success: true,
+            message: `Relatório enviado com sucesso via Gmail para ${turmaConfig.gestorEmail} (${turmaConfig.label})!`,
+          };
+        } catch (error: any) {
+          console.warn(`[AstroCheck] Tentativa ${attempt + 1} Google Apps Script falhou:`, error);
+          if (attempt < retryCount) {
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            continue;
+          }
+
+          saveLocalBackup(data, 'pending');
+          return {
+            success: false,
+            isOfflineSaved: true,
+            message: `Falha no envio via Gmail: ${error?.message || 'Erro de conexão'}. O relatório foi salvo no dispositivo.`,
+            error,
+          };
+        }
+      }
     }
   }
 
-  saveLocalBackup(data, 'pending');
+  // MODO SIMULAÇÃO
+  console.warn('[AstroCheck] Modo simulação (sem Google Script configurado).');
+  await new Promise(resolve => setTimeout(resolve, 600));
+  saveLocalBackup(data, 'sent');
   return {
-    success: false,
-    message: 'Não foi possível concluir o envio após tentativas.',
+    success: true,
+    message: `Relatório processado para o Gestor da ${turmaConfig.label}! (Modo Simulação)`,
   };
 }
