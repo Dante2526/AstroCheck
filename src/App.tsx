@@ -61,10 +61,11 @@ const LocomotiveSide = React.memo(({ size = 32 }: { size?: number }) => {
 });
 
 export function getMealQuestionText(date: Date = new Date()): string {
-  const hour = date.getHours();
-  if (hour >= 6 && hour < 12) {
+  const time = date.getHours() + date.getMinutes() / 60;
+  
+  if (time >= 6 && time < 11.75) {
     return 'Na manhã de hoje, tomou café-da-manhã antes de suas atividades?';
-  } else if (hour >= 12 && hour < 18) {
+  } else if (time >= 11.75 && time < 18) {
     return 'Na tarde de hoje, almoçou antes de suas atividades?';
   } else {
     return 'Na noite de hoje, jantou antes de suas atividades?';
