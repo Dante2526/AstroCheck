@@ -300,6 +300,7 @@ export async function sendReadinessEmail(
 
     // Ping CORS pre-flight para validar se podemos ler a resposta com segurança
     let corsEnabled = false;
+    let pingFailureReason = '';
     try {
       const pingController = new AbortController();
       const pingTimeoutId = setTimeout(() => pingController.abort(), 3500);
@@ -310,18 +311,28 @@ export async function sendReadinessEmail(
       clearTimeout(pingTimeoutId);
       if (pingRes.ok) {
         corsEnabled = true;
+      } else {
+        pingFailureReason = `HTTP ${pingRes.status} ${pingRes.statusText}`;
       }
-    } catch (pingErr) {
-      console.warn('[AstroCheck] Ping do Apps Script falhou (rede ou CORS). Abortando modo Gmail.');
+    } catch (pingErr: any) {
+      // BUGFIX: antes o erro real do ping era descartado, sobrando só um
+      // aviso genérico ("rede ou CORS") — impossível diagnosticar à
+      // distância se era timeout, DNS, CORS de verdade, ou outra coisa.
+      pingFailureReason = pingErr?.name === 'AbortError'
+        ? 'Timeout (sem resposta em 3.5s)'
+        : (pingErr?.message || String(pingErr));
+    }
+    if (!corsEnabled) {
+      console.warn(`[AstroCheck] Ping do Apps Script falhou: ${pingFailureReason}. Abortando modo Gmail.`);
     }
 
     if (!corsEnabled) {
-      console.warn('[AstroCheck] Sem CORS no GAS, falhando envio imediatamente (CORS Bloqueado/Rede).');
+      console.warn(`[AstroCheck] Sem CORS no GAS, falhando envio imediatamente. Motivo: ${pingFailureReason}`);
       saveLocalBackup(data, 'pending');
       return {
         success: false,
         isOfflineSaved: true,
-        message: 'Falha no envio via Gmail (Conexão ou CORS bloqueado). Relatório salvo no dispositivo para envio posterior.',
+        message: `Falha no envio via Gmail (${pingFailureReason || 'Conexão ou CORS bloqueado'}). Relatório salvo no dispositivo para envio posterior.`,
       };
     } else {
       for (let attempt = 0; attempt <= retryCount; attempt++) {
