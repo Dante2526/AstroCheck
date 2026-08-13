@@ -144,7 +144,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
               key={key}
               type="button"
               onClick={() => onSelectTurma(key)}
-              className={`relative flex flex-col text-left p-2.5 sm:p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer active:scale-98 select-none group ${
+              className={`relative flex items-center justify-center text-center p-2.5 sm:p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer active:scale-98 select-none group ${
                 isSelected
                   ? 'border-[#ff6b00] dark:border-[#ff7a00] bg-[#ff6b00]/10 dark:bg-[#ff7a00]/15 shadow-md ring-2 ring-[#ff6b00]/30 dark:ring-[#ff7a00]/30'
                   : 'border-outline-variant dark:border-[#383d4a] bg-surface-container-low/30 dark:bg-[#171922]/50 hover:border-outline hover:bg-surface-container-low dark:hover:bg-[#171922] dark:hover:border-[#4a5568]'
@@ -161,18 +161,6 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
                 )}
               </div>
 
-              {/* Tag do Período */}
-              <div className="flex items-center gap-1 mb-0.5 sm:mb-1">
-                <span className={`material-symbols-outlined text-[13px] sm:text-[16px] ${
-                  turma.periodo === 'Diurno' ? 'text-amber-500' : 'text-indigo-400'
-                }`}>
-                  {turma.periodo === 'Diurno' ? 'wb_sunny' : 'bedtime'}
-                </span>
-                <span className="text-[9px] sm:text-[11px] font-semibold text-on-surface-variant dark:text-[#a0aec0] uppercase tracking-wide">
-                  {turma.periodo}
-                </span>
-              </div>
-
               {/* Nome da Turma */}
               <span className={`text-sm sm:text-lg font-black transition-colors ${
                 isSelected 
@@ -180,11 +168,6 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
                   : 'text-on-surface dark:text-[#f7fafc]'
               }`}>
                 {turma.label}
-              </span>
-
-              {/* Horário */}
-              <span className="text-[10px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] mt-0.5 font-medium">
-                {turma.horario}
               </span>
             </button>
           );
