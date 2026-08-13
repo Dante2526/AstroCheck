@@ -47,7 +47,7 @@ const isWebAuthnAvailable = async (): Promise<boolean> => {
 };
 
 // Registra a credencial no sensor biométrico nativo do aparelho
-async function registerHardwareBiometric(matricula: string, nome: string): Promise<boolean> {
+async function registerHardwareBiometric(matricula: string, nome: string): Promise<boolean | string> {
   try {
     const challenge = new Uint8Array(32);
     window.crypto.getRandomValues(challenge);
@@ -86,14 +86,15 @@ async function registerHardwareBiometric(matricula: string, nome: string): Promi
       return true;
     }
     return Boolean(credential);
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[AstroCheck] Falha/cancelamento no cadastro biométrico:', err);
-    return false;
+    // Retorna a string do erro para podermos debugar na tela
+    return err instanceof Error ? `Erro: ${err.message}` : 'Erro desconhecido ao chamar sensor.';
   }
 }
 
 // Executa a leitura física do sensor biométrico do celular
-async function verifyHardwareBiometric(): Promise<boolean> {
+async function verifyHardwareBiometric(): Promise<boolean | string> {
   try {
     const challenge = new Uint8Array(32);
     window.crypto.getRandomValues(challenge);
@@ -121,9 +122,9 @@ async function verifyHardwareBiometric(): Promise<boolean> {
     });
 
     return Boolean(assertion);
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[AstroCheck] Leitura da digital cancelada ou incorreta:', err);
-    return false;
+    return err instanceof Error ? `Erro: ${err.message}` : 'Erro desconhecido ao chamar sensor.';
   }
 }
 
@@ -272,13 +273,10 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     if (!searchedColaborador) return;
 
     setBiometricFeedback('Aguardando sensor do celular...');
-    const hasWebAuthn = await isWebAuthnAvailable();
-
-    // BUGFIX/SEGURANÇA: sem suporte real a WebAuthn não existe verificação
-    // biométrica de hardware nenhuma para vincular. Antes o app seguia em
-    // frente e salvava mesmo assim, criando uma falsa sensação de segurança
-    // (ver handleQuickScan).
-    if (!hasWebAuthn) {
+    // Removido o isWebAuthnAvailable() aqui dentro do onClick porque o "await" nele
+    // consome o user gesture token (transient user activation) no Android Chrome,
+    // o que faz o navigator.credentials.create ser bloqueado logo em seguida.
+    if (!window.PublicKeyCredential || !navigator.credentials) {
       setBiometricFeedback('Este aparelho não possui leitor biométrico compatível. Use a matrícula manualmente.');
       return;
     }
@@ -287,8 +285,8 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
       searchedColaborador.matricula,
       searchedColaborador.nome
     );
-    if (!enrolled) {
-      setBiometricFeedback('Cadastro biométrico cancelado no celular.');
+    if (enrolled !== true) {
+      setBiometricFeedback(typeof enrolled === 'string' ? enrolled : 'Cadastro biométrico cancelado no celular.');
       return;
     }
 
@@ -322,16 +320,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     if (!savedBiometric) return;
     setBiometricFeedback(null);
 
-    const hasWebAuthn = await isWebAuthnAvailable();
-
-    // BUGFIX/SEGURANÇA: antes, em aparelhos sem suporte a WebAuthn, o app
-    // autenticava automaticamente (authOk = true) só pelo toque no botão,
-    // sem checar digital nenhuma. Isso permitia que qualquer pessoa com
-    // acesso ao aparelho "entrasse" como o último colaborador vinculado —
-    // grave em dispositivo compartilhado. Agora, sem suporte real a
-    // biometria de hardware, o acesso rápido é recusado e a pessoa precisa
-    // se identificar manualmente pela matrícula.
-    if (!hasWebAuthn) {
+    if (!window.PublicKeyCredential || !navigator.credentials) {
       setBiometricFeedback('Este aparelho não suporta verificação biométrica. Identifique-se pela matrícula.');
       return;
     }
@@ -343,8 +332,8 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
       // Se ainda não tinha credencial salva, cadastra o sensor agora
       : await registerHardwareBiometric(savedBiometric.matricula, savedBiometric.nome);
 
-    if (!authOk) {
-      setBiometricFeedback('⚠️ Autenticação biométrica não concluída.');
+    if (authOk !== true) {
+      setBiometricFeedback(typeof authOk === 'string' ? authOk : '⚠️ Autenticação biométrica não concluída.');
       return;
     }
 
