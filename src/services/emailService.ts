@@ -164,22 +164,21 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
               <td style="padding:6px 20px 14px 20px;">
                 <table class="info-box" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;">
                   <tr>
-                    <td class="info-label" style="padding:10px 14px;color:#64748b;font-weight:600;width:32%;">Turma / Turno:</td>
+                    <td class="info-label" style="padding:10px 14px;color:#64748b;font-weight:600;width:32%;">Turma:</td>
                     <td class="info-value" style="padding:10px 14px;font-weight:700;color:#0f172a;">
                       <span style="color:${turmaConfig.color};font-weight:800;">${turmaConfig.label}</span>
-                      <span style="color:#64748b;font-weight:500;margin-left:4px;">(${turmaConfig.turno} — ${turmaConfig.horario})</span>
                     </td>
                   </tr>
                   <tr>
-                    <td class="info-label info-border" style="padding:10px 14px;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0;">Data e Horário:</td>
-                    <td class="info-value info-border" style="padding:10px 14px;font-weight:600;color:#1e293b;border-top:1px solid #e2e8f0;">${dateFormatted}</td>
+                    <td class="info-label info-border" style="padding:10px 14px;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0;white-space:nowrap;">Data e Horário:</td>
+                    <td class="info-value info-border" style="padding:10px 14px;font-weight:600;color:#1e293b;border-top:1px solid #e2e8f0;white-space:nowrap;">${dateFormatted}</td>
                   </tr>
                   ${data.colaboradorNome ? `
                   <tr>
                     <td class="info-label info-border" style="padding:10px 14px;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0;">Colaborador:</td>
                     <td class="info-value info-border" style="padding:10px 14px;font-weight:700;color:#0f172a;border-top:1px solid #e2e8f0;">
                       ${escapeHtml(data.colaboradorNome)}
-                      ${data.colaboradorMatricula ? `<span style="color:#0284c7;font-weight:700;font-size:12px;margin-left:6px;">(Mat: ${escapeHtml(data.colaboradorMatricula)})</span>` : ''}
+                      ${data.colaboradorMatricula ? `<div style="color:#0284c7;font-weight:700;font-size:12px;margin-top:2px;">(Mat: ${escapeHtml(data.colaboradorMatricula)})</div>` : ''}
                     </td>
                   </tr>` : ''}
                 </table>
@@ -229,9 +228,10 @@ export function buildReadinessEmailPlainText(data: ReadinessReportData): string 
   const lines = [
     `ASTROCHECK - RELATÓRIO DE PRONTIDÃO`,
     `Status: ${isFullApto ? '100% APTO PARA JORNADA' : `ATENÇÃO: ${data.totalRisks} PONTO(S) DE RISCO`}`,
-    `Turma: ${turmaConfig.label} (${turmaConfig.turno} - ${turmaConfig.horario})`,
+    `Turma: ${turmaConfig.label}`,
     `Data/Hora: ${dateFormatted}`,
-    data.colaboradorNome ? `Colaborador: ${data.colaboradorNome} (Mat: ${data.colaboradorMatricula || 'N/I'})` : '',
+    data.colaboradorNome ? `Colaborador: ${data.colaboradorNome}` : '',
+    data.colaboradorMatricula ? `(Mat: ${data.colaboradorMatricula})` : '',
     '',
     `RESPOSTAS DO CHECKLIST:`,
     ...data.answers.map(a => `#${a.questionId}: ${a.answer === 'yes' ? 'SIM' : a.answer === 'no' ? 'NÃO' : 'N/R'} - ${a.questionText}`),
