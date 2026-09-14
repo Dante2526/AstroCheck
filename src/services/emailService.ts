@@ -357,6 +357,16 @@ export async function sendReadinessEmail(
 
   // MODO SIMULAÇÃO (Se não houver script ou script for local)
   if (!hasGoogleScript) {
+    // Em DEV: permitir simulacao para testes locais sem Gmail configurado
+    if (import.meta.env.DEV) {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      saveLocalBackup(data, 'sent');
+      return {
+        success: true,
+        message: `Relatório processado para o Gestor da ${turmaConfig.label}! (Modo Simulacao DEV)`,
+      };
+    }
+    // Em PROD: falha explicita
     console.error('[AstroCheck] GOOGLE_SCRIPT_URL não configurado!');
     saveLocalBackup(data, 'pending');
     return {

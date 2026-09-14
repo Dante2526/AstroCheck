@@ -78,7 +78,31 @@ const SECONDARY_COLLECTIONS = [
 // turno) e entradas expiradas são descartadas automaticamente.
 const CACHE_STORAGE_KEY = 'astrocheck_colabs_cache_v3';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
-const memoryCache = new Map<string, FirestoreColaborador>();
+
+// Opcao B: TTL agressivo em memoria - expurgar PII apos 5 min
+const MEMORY_TTL_MS = 5 * 60 * 1000;
+interface MemoryEntry {
+  item: FirestoreColaborador;
+  expiresAt: number;
+}
+const memoryCacheWithTTL = new Map<string, MemoryEntry>();
+
+function memorySet(key: string, item: FirestoreColaborador): void {
+  memoryCacheWithTTL.set(key, {
+    item,
+    expiresAt: Date.now() + MEMORY_TTL_MS,
+  });
+}
+
+function memoryGet(key: string): FirestoreColaborador | null {
+  const entry = memoryCacheWithTTL.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    memoryCacheWithTTL.delete(key);
+    return null;
+  }
+  return entry.item;
+}
 
 interface CachedEntry {
   item: FirestoreColaborador;
@@ -114,9 +138,9 @@ function initCache() {
   fresh.forEach(({ item }) => {
     if (item.matricula) {
       const raw = String(item.matricula).replace(/\D/g, '');
-      memoryCache.set(raw, item);
-      memoryCache.set(raw.padStart(8, '0'), item);
-      memoryCache.set(String(Number(raw)), item);
+      memorySet(raw, item);
+      memorySet(raw.padStart(8, '0'), item);
+      memorySet(String(Number(raw)), item);
     }
   });
 }
@@ -126,10 +150,10 @@ function cacheColaborador(item: FirestoreColaborador) {
   const raw = String(item.matricula).replace(/\D/g, '');
   if (!raw) return;
   
-  // Cache in-memory completo (válido apenas durante a sessão atual)
-  memoryCache.set(raw, item);
-  memoryCache.set(raw.padStart(8, '0'), item);
-  memoryCache.set(String(Number(raw)), item);
+  // Cache in-memory completo (válido apenas durante a sessão atual, limitado pelo TTL)
+  memorySet(raw, item);
+  memorySet(raw.padStart(8, '0'), item);
+  memorySet(String(Number(raw)), item);
 
   if (typeof window !== 'undefined') {
     const now = Date.now();
@@ -151,10 +175,12 @@ function cacheColaborador(item: FirestoreColaborador) {
 export function getCachedColaborador(inputMatricula: string): FirestoreColaborador | null {
   const digitsOnly = inputMatricula.trim().replace(/\D/g, '');
   if (!digitsOnly) return null;
-  if (memoryCache.has(digitsOnly)) return memoryCache.get(digitsOnly)!;
+  const cached = memoryGet(digitsOnly);
+  if (cached) return cached;
+
   const padded8 = digitsOnly.padStart(8, '0');
-  if (memoryCache.has(padded8)) return memoryCache.get(padded8)!;
-  return null;
+  const cachedPadded = memoryGet(padded8);
+  if (cachedPadded) return cachedPadded;return null;
 }
 
 
@@ -279,14 +305,14 @@ export async function findColaboradorInFirestore(
 
   // ⚡ NÍVEL 0: CACHE LOCAL INSTANTÂNEO
   // Só usar se tiver o nome, caso contrário precisamos buscar no Firestore
-  if (memoryCache.has(digitsOnly)) {
-    const cached = memoryCache.get(digitsOnly)!;
-    if (cached.nome) return cached;
+  const cachedRaw = memoryGet(digitsOnly);
+  if (cachedRaw && cachedRaw.nome) {
+    return cachedRaw;
   }
   const padded8 = digitsOnly.padStart(8, '0');
-  if (memoryCache.has(padded8)) {
-    const cached = memoryCache.get(padded8)!;
-    if (cached.nome) return cached;
+  const cachedPadded = memoryGet(padded8);
+  if (cachedPadded && cachedPadded.nome) {
+    return cachedPadded;
   }
 
   if (!db || !isFirebaseConfigured) {
