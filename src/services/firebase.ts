@@ -125,6 +125,8 @@ initCache();
 function cacheColaborador(item: FirestoreColaborador) {
   const raw = String(item.matricula).replace(/\D/g, '');
   if (!raw) return;
+  
+  // Cache in-memory completo (válido apenas durante a sessão atual)
   memoryCache.set(raw, item);
   memoryCache.set(raw.padStart(8, '0'), item);
   memoryCache.set(String(Number(raw)), item);
@@ -132,7 +134,10 @@ function cacheColaborador(item: FirestoreColaborador) {
   if (typeof window !== 'undefined') {
     const now = Date.now();
     const existing = readPersistentCache().filter(entry => entry.item.matricula !== item.matricula);
-    existing.unshift({ item, cachedAt: now });
+    
+    // BUGFIX: PII Mitigation - salvar apenas a matrícula no localStorage (não salvar nome/cargo)
+    const safeItem: FirestoreColaborador = { matricula: item.matricula, nome: '', cargo: '', turma: '' };
+    existing.unshift({ item: safeItem, cachedAt: now });
     writePersistentCache(existing);
   }
 }
@@ -221,9 +226,9 @@ async function searchInCollections(
 ): Promise<FirestoreColaborador | null> {
   if (!db) return null;
 
-  // 1. Busca direta por Document ID (Super rápida e econômica)
-  const docLookups = collections.flatMap(colName =>
-    possibleKeys.map(async key => {
+  // 1. Busca direta por Document ID - sequencial para parar na primeira que acertar
+  for (const colName of collections) {
+    for (const key of possibleKeys) {
       try {
         const docRef = doc(db!, colName, key);
         const snap = await getDoc(docRef);
@@ -235,15 +240,11 @@ async function searchInCollections(
       } catch {
         // ignora
       }
-      return null;
-    })
-  );
-
-  const fastestDoc = await firstSuccessfulHit(docLookups);
-  if (fastestDoc) return fastestDoc;
+    }
+  }
 
   // 2. Busca por query where('matricula') caso o ID seja aleatório
-  const queryLookups = collections.map(async colName => {
+  for (const colName of collections) {
     try {
       const colRef = collection(db!, colName);
       const q = query(colRef, where('matricula', 'in', possibleKeys), limit(1));
@@ -257,10 +258,9 @@ async function searchInCollections(
     } catch {
       // ignora
     }
-    return null;
-  });
+  }
 
-  return await firstSuccessfulHit(queryLookups);
+  return null;
 }
 
 /**
@@ -277,13 +277,16 @@ export async function findColaboradorInFirestore(
   const digitsOnly = rawClean.replace(/\D/g, '');
   if (!digitsOnly) return null;
 
-  // ⚡ NÍVEL 0: CACHE LOCAL INSTANTÂNEO (0ms & 0 LEITURAS NO FIRESTORE)
+  // ⚡ NÍVEL 0: CACHE LOCAL INSTANTÂNEO
+  // Só usar se tiver o nome, caso contrário precisamos buscar no Firestore
   if (memoryCache.has(digitsOnly)) {
-    return memoryCache.get(digitsOnly)!;
+    const cached = memoryCache.get(digitsOnly)!;
+    if (cached.nome) return cached;
   }
   const padded8 = digitsOnly.padStart(8, '0');
   if (memoryCache.has(padded8)) {
-    return memoryCache.get(padded8)!;
+    const cached = memoryCache.get(padded8)!;
+    if (cached.nome) return cached;
   }
 
   if (!db || !isFirebaseConfigured) {

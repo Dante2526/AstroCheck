@@ -145,6 +145,7 @@ export default function App() {
   const [selectedTurma, setSelectedTurma] = useState<TurmaKey | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isEmailSuccess, setIsEmailSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Estado do Colaborador (identificação por matrícula)
   const [colaborador, setColaborador] = useState<{ matricula: string; nome: string; cargo?: string } | null>(() => {
@@ -303,16 +304,20 @@ export default function App() {
       colaboradorCargo: colaborador?.cargo,
     };
 
-    const [result] = await Promise.all([
+    const [emailResult, firestoreResult] = await Promise.all([
       sendReadinessEmail(reportData),
       saveChecklistToFirestore(reportData),
     ]);
     setIsSendingEmail(false);
 
-    if (result.success) {
+    if (emailResult.success && firestoreResult.success) {
       setIsEmailSuccess(true);
+    } else if (emailResult.success && !firestoreResult.success) {
+      setIsEmailSuccess(true);
+      console.error('[AstroCheck] Firestore falhou:', firestoreResult.error);
     } else {
-      alert(`Aviso: ${result.message}`);
+      setErrorMessage(`Aviso: ${emailResult.message}`);
+      setTimeout(() => setErrorMessage(null), 5000);
     }
   };
 
@@ -564,25 +569,27 @@ export default function App() {
           <>
             <div className={`w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 shadow-[0_4px_20px_rgba(32,59,139,0.10)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-[3px] sm:border-[4px] ${cardBorderClass} p-3 sm:p-5 flex-1 min-h-0 max-h-[500px] sm:max-h-[560px] justify-between`}>
               
-              {/* Image Illustration */}
-              <div className="w-full flex-1 min-h-[90px] sm:min-h-[140px] max-h-[160px] sm:max-h-[220px] flex justify-center items-center py-1 sm:py-2 bg-surface-container-low/40 dark:bg-[#171922]/60 rounded-xl transition-colors duration-300">
-                <img 
-                  alt={question.imageAlt} 
-                  className="h-full max-h-[120px] sm:max-h-[195px] w-auto mx-auto block object-contain transition-transform duration-300 hover:scale-105" 
-                  src={question.image} 
-                  style={{ filter: isDarkMode ? 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.12))' }}
-                />
-              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col">
+                {/* Image Illustration */}
+                <div className="w-full flex-1 min-h-[90px] sm:min-h-[140px] max-h-[160px] sm:max-h-[220px] flex justify-center items-center py-1 sm:py-2 bg-surface-container-low/40 dark:bg-[#171922]/60 rounded-xl transition-colors duration-300">
+                  <img 
+                    alt={question.imageAlt} 
+                    className="h-full max-h-[120px] sm:max-h-[195px] w-auto mx-auto block object-contain transition-transform duration-300 hover:scale-105" 
+                    src={question.image} 
+                    style={{ filter: isDarkMode ? 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.12))' }}
+                  />
+                </div>
 
-              {/* Question Text */}
-              <div className="my-1.5 sm:my-2.5 text-center px-1 sm:px-2 flex flex-col items-center justify-center">
-                <h2 className={`font-semibold text-on-surface dark:text-[#f7fafc] min-h-[38px] sm:min-h-[52px] flex items-center justify-center transition-colors duration-300 ${
-                  question.text.length > 110 
-                    ? 'text-[12px] sm:text-[14px] md:text-[15px] leading-snug sm:leading-normal max-w-lg' 
-                    : 'text-xs sm:text-base leading-snug'
-                }`}>
-                  {question.text}
-                </h2>
+                {/* Question Text */}
+                <div className="my-1.5 sm:my-2.5 text-center px-1 sm:px-2 flex flex-col items-center justify-center">
+                  <h2 className={`font-semibold text-on-surface dark:text-[#f7fafc] min-h-[38px] sm:min-h-[52px] flex items-center justify-center transition-colors duration-300 ${
+                    question.text.length > 110 
+                      ? 'text-[12px] sm:text-[14px] md:text-[15px] leading-snug sm:leading-normal max-w-lg' 
+                      : 'text-xs sm:text-base leading-snug'
+                  }`}>
+                    {question.text}
+                  </h2>
+                </div>
               </div>
 
               {/* Action Buttons (Sim / Não) */}
@@ -671,6 +678,17 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* Toast Notification */}
+      {errorMessage && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fadeIn max-w-[90%] sm:max-w-md">
+          <span className="material-symbols-outlined">error</span>
+          <span className="text-sm font-medium">{errorMessage}</span>
+          <button onClick={() => setErrorMessage(null)} className="ml-2 text-white/70 hover:text-white shrink-0">
+            <span className="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

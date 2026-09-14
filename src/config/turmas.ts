@@ -1,5 +1,16 @@
 // src/config/turmas.ts
 
+function requireGestorEmail(env: string | undefined, turma: string): string {
+  if (!env || !env.includes('@') || env.endsWith('@empresa.com')) {
+    if (import.meta.env.PROD) {
+      console.error(`[AstroCheck] VITE_GESTOR_EMAIL_${turma} não configurado!`);
+      return ''; // string vazia dispara erro no emailService / ui
+    }
+    return `gestor.turma.${turma.toLowerCase()}@empresa.com`; // dev apenas
+  }
+  return env;
+}
+
 export type TurmaKey = 'A' | 'B' | 'C' | 'D';
 
 export interface TurmaConfig {
@@ -24,7 +35,7 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
     horario: '07h00 às 19h00',
     periodo: 'Diurno',
     gestorNome: import.meta.env.VITE_GESTOR_NOME_A || 'Gestor Turma A',
-    gestorEmail: import.meta.env.VITE_GESTOR_EMAIL_A || import.meta.env.VITE_GESTOR_EMAIL || 'gestor.turma.a@empresa.com',
+    gestorEmail: requireGestorEmail(import.meta.env.VITE_GESTOR_EMAIL_A || import.meta.env.VITE_GESTOR_EMAIL, 'A'),
     color: '#0080ff',
     bgLight: 'rgba(0, 128, 255, 0.08)',
     bgDark: 'rgba(0, 128, 255, 0.15)',
@@ -37,7 +48,7 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
     horario: '07h00 às 19h00',
     periodo: 'Diurno',
     gestorNome: import.meta.env.VITE_GESTOR_NOME_B || 'Gestor Turma B',
-    gestorEmail: import.meta.env.VITE_GESTOR_EMAIL_B || import.meta.env.VITE_GESTOR_EMAIL || 'gestor.turma.b@empresa.com',
+    gestorEmail: requireGestorEmail(import.meta.env.VITE_GESTOR_EMAIL_B || import.meta.env.VITE_GESTOR_EMAIL, 'B'),
     color: '#22c55e',
     bgLight: 'rgba(34, 197, 94, 0.08)',
     bgDark: 'rgba(34, 197, 94, 0.15)',
@@ -50,7 +61,7 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
     horario: '19h00 às 07h00',
     periodo: 'Noturno',
     gestorNome: import.meta.env.VITE_GESTOR_NOME_C || 'Gestor Turma C',
-    gestorEmail: import.meta.env.VITE_GESTOR_EMAIL_C || import.meta.env.VITE_GESTOR_EMAIL || 'gestor.turma.c@empresa.com',
+    gestorEmail: requireGestorEmail(import.meta.env.VITE_GESTOR_EMAIL_C || import.meta.env.VITE_GESTOR_EMAIL, 'C'),
     color: '#f59e0b',
     bgLight: 'rgba(245, 158, 11, 0.08)',
     bgDark: 'rgba(245, 158, 11, 0.15)',
@@ -63,7 +74,7 @@ export const TURMAS: Record<TurmaKey, TurmaConfig> = {
     horario: '19h00 às 07h00',
     periodo: 'Noturno',
     gestorNome: import.meta.env.VITE_GESTOR_NOME_D || 'Gestor Turma D',
-    gestorEmail: import.meta.env.VITE_GESTOR_EMAIL_D || import.meta.env.VITE_GESTOR_EMAIL || 'gestor.turma.d@empresa.com',
+    gestorEmail: requireGestorEmail(import.meta.env.VITE_GESTOR_EMAIL_D || import.meta.env.VITE_GESTOR_EMAIL, 'D'),
     color: '#a855f7',
     bgLight: 'rgba(168, 85, 247, 0.08)',
     bgDark: 'rgba(168, 85, 247, 0.15)',

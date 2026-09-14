@@ -281,6 +281,13 @@ export async function sendReadinessEmail(
 
   const hasGoogleScript = Boolean(GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim().startsWith('http'));
 
+  if (!turmaConfig.gestorEmail) {
+    return {
+      success: false,
+      message: 'Gestor da turma não configurado. Contate o TI.',
+    };
+  }
+
   // DISPARO VIA GOOGLE APPS SCRIPT (GMAIL OFICIAL - 500 A 1.500 ENVIOS/DIA GRATUITOS)
   if (hasGoogleScript) {
     const payload = {
@@ -348,8 +355,18 @@ export async function sendReadinessEmail(
       }
   }
 
-  // MODO SIMULAÇÃO
-  console.warn('[AstroCheck] Modo simulação (sem Google Script configurado).');
+  // MODO SIMULAÇÃO (Se não houver script ou script for local)
+  if (!hasGoogleScript) {
+    console.error('[AstroCheck] GOOGLE_SCRIPT_URL não configurado!');
+    saveLocalBackup(data, 'pending');
+    return {
+      success: false,
+      isOfflineSaved: true,
+      message: 'Serviço de e-mail não configurado. Relatório salvo no dispositivo. Contate o TI.',
+    };
+  }
+
+  // Fallback se algo falhar na verificação acima
   await new Promise(resolve => setTimeout(resolve, 600));
   saveLocalBackup(data, 'sent');
   return {

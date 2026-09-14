@@ -52,7 +52,8 @@ async function registerHardwareBiometric(matricula: string, nome: string): Promi
     const challenge = new Uint8Array(32);
     window.crypto.getRandomValues(challenge);
     const userId = new Uint8Array(Array.from(matricula).map((c) => c.charCodeAt(0)));
-    const rpId = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+    const rpId = import.meta.env.VITE_WEBAUTHN_RPID ||
+      (window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname);
 
     const credential = (await navigator.credentials.create({
       publicKey: {
@@ -98,7 +99,8 @@ async function verifyHardwareBiometric(): Promise<boolean | string> {
   try {
     const challenge = new Uint8Array(32);
     window.crypto.getRandomValues(challenge);
-    const rpId = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+    const rpId = import.meta.env.VITE_WEBAUTHN_RPID ||
+      (window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname);
     const credIdB64 = localStorage.getItem(CREDENTIAL_KEY);
 
     const allowCredentials = credIdB64
