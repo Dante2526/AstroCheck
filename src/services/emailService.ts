@@ -3,7 +3,6 @@ import {
   TURMAS, 
   GOOGLE_SCRIPT_URL
 } from '../config/turmas';
-import { fetchEmailSettings } from './firebase';
 
 export interface ReadinessAnswerItem {
   questionId: number;
@@ -255,13 +254,21 @@ function saveLocalBackup(data: ReadinessReportData, status: 'sent' | 'pending') 
   try {
     const historyKey = 'astrocheck_reports_history';
     const existing = JSON.parse(localStorage.getItem(historyKey) || '[]');
-    existing.unshift({
-      ...data,
+    
+    // Sanitizar: manter so metadados, nao respostas nem PII nominal (REG-5)
+    const safeEntry = {
+      matricula: data.colaboradorMatricula, // so matricula
+      turma: data.turma,
+      totalRisks: data.totalRisks,
+      timestamp: data.timestamp,
       status,
       savedAt: new Date().toISOString(),
-    });
-    // Manter no máximo os últimos 50 relatórios salvos
-    localStorage.setItem(historyKey, JSON.stringify(existing.slice(0, 50)));
+      // NAO incluir: colaboradorNome, colaboradorCargo, answers[]
+    };
+    existing.unshift(safeEntry);
+    
+    // Reduzir de 50 para 20 entradas (suficiente para auditoria)
+    localStorage.setItem(historyKey, JSON.stringify(existing.slice(0, 20)));
   } catch (err) {
     console.warn('[AstroCheck] Falha ao salvar backup local:', err);
   }
@@ -275,35 +282,27 @@ export async function sendReadinessEmail(
   retryCount: number = 1
 ): Promise<SendReportResult> {
   const turmaConfig = TURMAS[data.turma];
-  const html_content = buildReadinessEmailHtml(data);
-  const text_content = buildReadinessEmailPlainText(data);
-  const dateFormatted = new Date(data.timestamp).toLocaleString('pt-BR');
-  let gestorNome = turmaConfig.gestorNome;
-  let gestorEmail = turmaConfig.gestorEmail;
-
-  // Tenta buscar no banco de dados (prioridade sobre as variávais locais)
-  const dbSettings = await fetchEmailSettings();
-  if (dbSettings && dbSettings[data.turma]) {
-    gestorNome = dbSettings[data.turma].gestorNome || gestorNome;
-    gestorEmail = dbSettings[data.turma].gestorEmail || gestorEmail;
-  }
-
-  const subject = `AstroCheck Prontidão — ${turmaConfig.label} — ${new Date(data.timestamp).toLocaleDateString('pt-BR')}`;
-
   const hasGoogleScript = Boolean(GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim().startsWith('http'));
 
-  if (!gestorEmail) {
+  // 1. Validar config ANTES de fazer trabalho caro (REG-7)
+  if (!turmaConfig.gestorEmail) {
     return {
       success: false,
       message: 'Gestor da turma não configurado. Contate o TI.',
     };
   }
 
+  // 2. So agora construir HTML/texto/subject
+  const html_content = buildReadinessEmailHtml(data);
+  const text_content = buildReadinessEmailPlainText(data);
+  const dateFormatted = new Date(data.timestamp).toLocaleString('pt-BR');
+  const subject = `AstroCheck Prontidão — ${turmaConfig.label} — ${new Date(data.timestamp).toLocaleDateString('pt-BR')}`;
+
   // DISPARO VIA GOOGLE APPS SCRIPT (GMAIL OFICIAL - 500 A 1.500 ENVIOS/DIA GRATUITOS)
   if (hasGoogleScript) {
     const payload = {
-      to: gestorEmail,
-      to_name: gestorNome,
+      to: turmaConfig.gestorEmail,
+      to_name: turmaConfig.gestorNome,
       subject,
       html: html_content,
       text: text_content,

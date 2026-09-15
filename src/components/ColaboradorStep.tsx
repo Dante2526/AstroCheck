@@ -51,7 +51,16 @@ async function registerHardwareBiometric(matricula: string, nome: string): Promi
   try {
     const challenge = new Uint8Array(32);
     window.crypto.getRandomValues(challenge);
-    const userId = new Uint8Array(Array.from(matricula).map((c) => c.charCodeAt(0)));
+    
+    // REG-12: WebAuthn userId deve ter entre 1 e 64 bytes.
+    let userId: Uint8Array;
+    if (matricula.length <= 64) {
+      userId = new Uint8Array(Array.from(matricula).map((c) => c.charCodeAt(0)));
+    } else {
+      const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(matricula));
+      userId = new Uint8Array(hashBuffer);
+    }
+
     const rpId = import.meta.env.VITE_WEBAUTHN_RPID ||
       (window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname);
 
@@ -355,22 +364,22 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
     // só pra reconfirmar dados que já estavam salvos no aparelho — o
     // oposto do "0 leituras" que o próprio cache foi feito pra garantir.
     // Agora usamos primeiro o cache local (0 leituras) e a base local; só
-    // caem para os dados mínimos já salvos no vínculo biométrico se nada
+    // só caem para os dados mínimos já salvos no vínculo biométrico se nada
     // disso tiver a pessoa.
     const cachedColab = getCachedColaborador(savedBiometric.matricula);
-    if (cachedColab) {
+    if (cachedColab?.nome) {
       resolvedColab = {
         matricula: cachedColab.matricula,
         nome: cachedColab.nome,
         cargo: cachedColab.cargo,
       };
     } else {
-      const found = findColaboradorByMatricula(savedBiometric.matricula);
-      if (found) {
+      const fsColab = await findColaboradorInFirestore(savedBiometric.matricula);
+      if (fsColab) {
         resolvedColab = {
-          matricula: found.matricula,
-          nome: found.nome,
-          cargo: found.cargo,
+          matricula: fsColab.matricula,
+          nome: fsColab.nome,
+          cargo: fsColab.cargo,
         };
       } else {
         resolvedColab = {

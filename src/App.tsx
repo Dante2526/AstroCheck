@@ -8,10 +8,9 @@ import { flushSync } from 'react-dom';
 import { BB8Toggle } from './components/BB8Toggle';
 import { TurmaSelectionStep } from './components/TurmaSelectionStep';
 import { ColaboradorStep } from './components/ColaboradorStep';
-import { AdminPanel } from './components/AdminPanel';
 import { TurmaKey, TURMAS } from './config/turmas';
 import { sendReadinessEmail, ReadinessAnswerItem, ReadinessReportData } from './services/emailService';
-import { saveChecklistToFirestore, initializeEmailSettings } from './services/firebase';
+import { saveChecklistToFirestore, findColaboradorInFirestore } from './services/firebase';
 
 const LocomotiveSide = React.memo(({ size = 32 }: { size?: number }) => {
   const width = size * 1.5; // Torna a locomotiva 50% mais larga proporcionalmente à altura
@@ -140,10 +139,6 @@ export const getQuestions = (date: Date = new Date()) => [
 ];
 
 export default function App() {
-  if (typeof window !== 'undefined' && window.location.pathname === '/ADM') {
-    return <AdminPanel />;
-  }
-
   const questions = useMemo(() => getQuestions(), []);
   const [currentStep, setCurrentStep] = useState(1);
   const [isTurmaStep, setIsTurmaStep] = useState(false);
@@ -161,8 +156,55 @@ export default function App() {
       return null;
     }
   });
-  const [isColaboradorStep, setIsColaboradorStep] = useState<boolean>(true);
+  const [isColaboradorStep, setIsColaboradorStep] = useState<boolean>(() => {
+    // REG-6: Se colaborador esta hidratado do localStorage, pular tela de matricula
+    try {
+      const saved = localStorage.getItem('astrocheck_colaborador');
+      return !saved; // false se tem colaborador salvo
+    } catch {
+      return true;
+    }
+  });
 
+  // REG-11: colaborador hidratado do localStorage nao e revalidado no Firestore
+  useEffect(() => {
+    if (!colaborador?.matricula) return;
+    let cancelled = false;
+
+    // Revalidar colaborador no Firestore 5 segundos apos mount (nao bloqueia UI inicial)
+    const timeoutId = setTimeout(async () => {
+      try {
+        const fsColab = await findColaboradorInFirestore(colaborador.matricula);
+        if (cancelled) return;
+
+        if (!fsColab) {
+          // Colaborador nao existe mais no Firestore - deslogar
+          console.warn('[AstroCheck] Colaborador nao encontrado no Firestore, limpando sessao');
+          localStorage.removeItem('astrocheck_colaborador');
+          setColaborador(null);
+          setIsColaboradorStep(true);
+          setErrorMessage("Sua matrícula não está mais ativa. Contate o TI.");
+        } else if (fsColab.nome !== colaborador.nome || fsColab.cargo !== colaborador.cargo) {
+          // Dados mudaram - atualizar
+          const updated = {
+            matricula: fsColab.matricula,
+            nome: fsColab.nome,
+            cargo: fsColab.cargo,
+          };
+          setColaborador(updated);
+          localStorage.setItem('astrocheck_colaborador', JSON.stringify(updated));
+        }
+      } catch (err) {
+        // Firestore indisponivel - manter como esta (offline-first)
+        console.warn('[AstroCheck] Nao foi possivel revalidar colaborador:', err);
+      }
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, []); // run once on mount
   // BUGFIX: as respostas devem iniciar como `null` (não respondidas).
   // Antes, cada pergunta já nascia preenchida com o valor "seguro", permitindo
   // que o usuário avançasse o checklist inteiro sem responder nada e ainda
@@ -209,10 +251,6 @@ export default function App() {
       document.body.style.backgroundColor = '#f8f9fa';
     }
   }, [isDarkMode]);
-
-  useEffect(() => {
-    initializeEmailSettings();
-  }, []);
 
   // Pré-carregamento em background de todas as ilustrações WebP para transições ultra-rápidas (0ms)
   useEffect(() => {
@@ -690,11 +728,16 @@ export default function App() {
 
       {/* Toast Notification */}
       {errorMessage && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fadeIn max-w-[90%] sm:max-w-md">
-          <span className="material-symbols-outlined">error</span>
+        <div 
+          role="alert" 
+          aria-live="assertive" 
+          aria-atomic="true"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fadeIn max-w-[90%] sm:max-w-md"
+        >
+          <span className="material-symbols-outlined" aria-hidden="true">error</span>
           <span className="text-sm font-medium">{errorMessage}</span>
-          <button onClick={() => setErrorMessage(null)} className="ml-2 text-white/70 hover:text-white shrink-0">
-            <span className="material-symbols-outlined text-base">close</span>
+          <button onClick={() => setErrorMessage(null)} aria-label="Fechar mensagem de erro" className="ml-2 text-white/70 hover:text-white shrink-0">
+            <span className="material-symbols-outlined text-base" aria-hidden="true">close</span>
           </button>
         </div>
       )}
