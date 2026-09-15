@@ -105,7 +105,7 @@ export async function initializeEmailSettings(): Promise<void> {
 }
 
 const PRIMARY_COLLECTIONS = [
-  'administrators',
+  'administradores',
   'turma a',
   'turma b',
   'turma c',
