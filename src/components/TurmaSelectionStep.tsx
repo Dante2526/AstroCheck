@@ -1,5 +1,6 @@
 // src/components/TurmaSelectionStep.tsx
 import React from 'react';
+import { Check, CheckCircle2, RotateCcw, IdCard, Mail, ArrowLeft, Send } from 'lucide-react';
 import { TurmaKey, TURMAS, ALL_TURMA_KEYS } from '../config/turmas';
 
 export interface TurmaSelectionStepProps {
@@ -36,7 +37,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
         {/* Mascote Astronauta de Sucesso */}
         <div className="w-20 h-20 sm:w-28 sm:h-28 bg-[#22c55e]/15 dark:bg-[#22c55e]/20 rounded-full flex items-center justify-center p-2.5 sm:p-3 relative shadow-inner my-1">
           <div className="absolute -top-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#22c55e] text-white flex items-center justify-center shadow-md animate-bounce">
-            <span className="material-symbols-outlined text-[16px] sm:text-[20px]">check</span>
+            <Check size={18} className="text-white" />
           </div>
           <img 
             src="/astronaut_confortavel.webp" 
@@ -48,7 +49,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
         {/* Mensagem Principal */}
         <div className="my-1 sm:my-2">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#22c55e]/15 dark:bg-[#22c55e]/25 text-[#15803d] dark:text-[#4ade80] font-bold text-[11px] sm:text-sm mb-1 sm:mb-2">
-            <span className="material-symbols-outlined text-[14px] sm:text-[16px]">verified</span>
+            <CheckCircle2 size={16} className="shrink-0" />
             <span>Checklist Concluído</span>
           </div>
 
@@ -81,7 +82,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
           onClick={onReset}
           className="w-full sm:w-auto bg-[#ff6b00] hover:bg-[#ea580c] active:bg-[#c2410c] dark:bg-[#ff7a00] dark:hover:bg-[#ea580c] text-white text-xs sm:text-sm font-bold py-2.5 sm:py-3 px-6 sm:px-8 rounded-full shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1"
         >
-          <span className="material-symbols-outlined text-[16px] sm:text-[18px]">restart_alt</span>
+          <RotateCcw size={16} className="shrink-0" />
           <span>Iniciar Novo Checklist</span>
         </button>
       </div>
@@ -92,7 +93,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
   const isSendDisabled = selectedTurma === null || isSending;
 
   return (
-    <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl flex flex-col relative transition-all duration-300 shadow-[0_4px_20px_rgba(32,59,139,0.10)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-[3px] border-transparent dark:border-[#2d3139] p-3 sm:p-5 flex-1 min-h-0 max-h-[520px] sm:max-h-[580px] overflow-hidden justify-between">
+    <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl flex flex-col relative transition-all duration-300 shadow-[0_4px_20px_rgba(32,59,139,0.10)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-[3px] border-transparent dark:border-[#2d3139] p-3 sm:p-5 flex-1 min-h-0 max-h-[540px] sm:max-h-[580px] overflow-hidden justify-between">
       
       {/* Cabeçalho da Etapa com Mini-Mascote */}
       <div className="flex items-center gap-2.5 sm:gap-3 pb-1.5 sm:pb-2 border-b border-outline-variant/40 dark:border-[#2d3139] shrink-0">
@@ -120,7 +121,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
         </div>
         {colaborador && (
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-low dark:bg-[#171922] border border-outline-variant/40 dark:border-[#2d3139] text-right">
-            <span className="material-symbols-outlined text-[16px] text-primary dark:text-[#0080ff]">badge</span>
+            <IdCard size={16} className="text-primary dark:text-[#0080ff] shrink-0" />
             <div className="text-[11px]">
               <div className="font-bold text-on-surface dark:text-[#f7fafc] truncate max-w-[120px]">
                 {colaborador.nome.split(' ')[0]}
@@ -157,7 +158,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
                   : 'border-2 border-outline-variant dark:border-[#4a5568] scale-90 opacity-60'
               }`}>
                 {isSelected && (
-                  <span className="material-symbols-outlined text-[12px] sm:text-[16px] font-bold">check</span>
+                  <Check size={14} className="font-bold text-white" />
                 )}
               </div>
 
@@ -177,7 +178,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
       {/* Info do Gestor Destinatário quando selecionado */}
       <div className="min-h-[32px] sm:min-h-[38px] px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-surface-container-low/50 dark:bg-[#171922]/80 border border-outline-variant/40 dark:border-[#2d3139] flex items-center justify-between text-[11px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] shrink-0">
         <div className="flex items-center gap-1.5 truncate">
-          <span className="material-symbols-outlined text-[15px] sm:text-[16px] text-primary dark:text-[#90eff9]">mail</span>
+          <Mail size={16} className="text-primary dark:text-[#90eff9] shrink-0" />
           <span className="truncate">
             {selectedTurma ? (
               <>
@@ -198,12 +199,13 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
 
       {/* Botões de Ação (Voltar / Enviar Prontidão) */}
       <div className="w-full flex justify-between items-center mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-outline-variant/40 dark:border-[#2d3139] shrink-0">
+        {/* #11: Voltar assume estilo secundário neutro */}
         <button 
           onClick={onBack}
           disabled={isSending}
-          className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-3.5 sm:px-6 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
+          className="bg-surface-container-high hover:bg-surface-container-highest active:bg-surface-container-highest dark:bg-[#252836] dark:hover:bg-[#2d3139] text-on-surface dark:text-[#f7fafc] border border-outline-variant/60 dark:border-[#383d4a] text-xs sm:text-sm font-bold py-2 sm:py-3 px-3.5 sm:px-6 rounded-full shadow-xs hover:shadow transition-all duration-200 active:scale-95 flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_back</span>
+          <ArrowLeft size={16} className="shrink-0" />
           <span>Voltar</span>
         </button>
 
@@ -224,7 +226,7 @@ export const TurmaSelectionStep: React.FC<TurmaSelectionStepProps> = ({
           ) : (
             <>
               <span>Enviar Prontidão</span>
-              <span className="material-symbols-outlined text-[16px] sm:text-[18px]">send</span>
+              <Send size={16} className="shrink-0" />
             </>
           )}
         </button>

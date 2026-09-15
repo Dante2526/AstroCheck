@@ -14,6 +14,10 @@ import {
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously, Auth, User } from 'firebase/auth';
 
+// NOTA DE SEGURANÇA (#28): Em aplicações SPA/PWA Firebase, a apiKey é um identificador
+// público do projeto no Google Cloud e não uma chave mestra de autenticação. O controle
+// real de permissões, leitura e escrita é estritamente governado pelas Firestore Security Rules
+// (ex: validação de request.auth != null e schema de campos na coleção registrosAstroCheck).
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -185,16 +189,29 @@ export function getCachedColaborador(inputMatricula: string): FirestoreColaborad
 
 /**
  * Garante que o usuário esteja autenticado (anônimo) para satisfazer `request.auth != null` no Firestore.
+ * Inclui timeout de segurança para evitar que falhas de rede travem chamadas subsequentes (#7).
  */
-export async function ensureFirebaseAuth(): Promise<User | null> {
+export async function ensureFirebaseAuth(timeoutMs: number = 6000): Promise<User | null> {
   if (!auth) return null;
   if (auth.currentUser) return auth.currentUser;
+
+  let timer: any = null;
+  const authPromise = signInAnonymously(auth).then(cred => cred.user);
+  const timeoutPromise = new Promise<null>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn(`[AstroCheck] Timeout (${timeoutMs}ms) na autenticação anônima do Firebase`);
+      resolve(null);
+    }, timeoutMs);
+  });
+
   try {
-    const cred = await signInAnonymously(auth);
-    return cred.user;
+    const user = await Promise.race([authPromise, timeoutPromise]);
+    return user;
   } catch (err) {
     console.warn('[AstroCheck] Falha na autenticação anônima:', err);
     return null;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -332,11 +349,13 @@ export async function saveChecklistToFirestore(reportData: any): Promise<{ succe
   try {
     await ensureFirebaseAuth();
     
-    // Salva na coleção 'registrosAstroCheck'
+    // Salva na coleção 'registrosAstroCheck' com data única e consistente (#8)
     const colRef = collection(db, 'registrosAstroCheck');
+    const recordTimestamp = reportData.timestamp || new Date().toISOString();
     const docRef = await addDoc(colRef, {
       ...reportData,
-      createdAt: new Date().toISOString(),
+      createdAt: recordTimestamp,
+      timestamp: recordTimestamp,
     });
 
     console.log('[AstroCheck] Relatório salvo no Firestore com ID:', docRef.id);

@@ -118,10 +118,6 @@
   background-color: rgba(65, 89, 171, 0.05);
 }
 
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-}
-
 html, body, #root {
   transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -185,12 +181,22 @@ html.light-transition::view-transition-new(root) {
   100% { transform: translateY(-8px) scale(1.2); opacity: 0; }
 }
 
+/* #19: Animações otimizadas para bateria (GPU-accelerated, ritmo suave e suporte a prefers-reduced-motion) */
 .animate-train-bounce {
-  animation: train-bounce 0.4s ease-in-out infinite;
+  animation: train-bounce 1.2s ease-in-out infinite;
+  will-change: transform;
 }
 
 .animate-smoke-float {
-  animation: smoke-float 1.5s ease-out infinite;
+  animation: smoke-float 2.4s ease-out infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-train-bounce,
+  .animate-smoke-float {
+    animation: none !important;
+  }
 }
 
 

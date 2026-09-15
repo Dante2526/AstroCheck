@@ -166,7 +166,7 @@ export function buildReadinessEmailHtml(data: ReadinessReportData): string {
                   <tr>
                     <td class="info-label" style="padding:10px 14px;color:#64748b;font-weight:600;width:32%;">Turma:</td>
                     <td class="info-value" style="padding:10px 14px;font-weight:700;color:#0f172a;">
-                      <span style="color:${turmaConfig.color};font-weight:800;">${turmaConfig.label}</span>
+                      <span style="color:${turmaConfig.color};font-weight:800;">${escapeHtml(turmaConfig.label)}</span>
                     </td>
                   </tr>
                   <tr>

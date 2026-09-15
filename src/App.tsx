@@ -4,13 +4,16 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { flushSync } from 'react-dom';
+import { User, CheckCircle, CircleX, ArrowLeft, ArrowRight, AlertCircle, X } from 'lucide-react';
 import { BB8Toggle } from './components/BB8Toggle';
 import { TurmaSelectionStep } from './components/TurmaSelectionStep';
 import { ColaboradorStep } from './components/ColaboradorStep';
 import { TurmaKey, TURMAS } from './config/turmas';
 import { sendReadinessEmail, ReadinessAnswerItem, ReadinessReportData } from './services/emailService';
 import { saveChecklistToFirestore, findColaboradorInFirestore } from './services/firebase';
+
+// #18: Cache no nível do módulo para garantir que cada imagem seja pré-carregada apenas uma única vez
+const preloadedImageUrls = new Set<string>();
 
 const LocomotiveSide = React.memo(({ size = 32 }: { size?: number }) => {
   const width = size * 1.5; // Torna a locomotiva 50% mais larga proporcionalmente à altura
@@ -139,10 +142,25 @@ export const getQuestions = (date: Date = new Date()) => [
 ];
 
 export default function App() {
-  const questions = useMemo(() => getQuestions(), []);
   const [currentStep, setCurrentStep] = useState(1);
   const [isTurmaStep, setIsTurmaStep] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<TurmaKey | null>(null);
+
+  // #3: Mantém a pergunta de refeição sempre atualizada ao cruzar 11h45/18h/6h
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentDate(new Date());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setCurrentDate(new Date());
+  }, [currentStep]);
+
+  const questions = useMemo(() => getQuestions(currentDate), [currentDate]);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isEmailSuccess, setIsEmailSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -205,23 +223,23 @@ export default function App() {
       clearTimeout(timeoutId);
     };
   }, []); // run once on mount
-  // BUGFIX: as respostas devem iniciar como `null` (não respondidas).
-  // Antes, cada pergunta já nascia preenchida com o valor "seguro", permitindo
-  // que o usuário avançasse o checklist inteiro sem responder nada e ainda
-  // assim gerasse um relatório "100% APTO".
-  const createEmptyAnswers = (): Record<number, 'yes' | 'no' | null> => ({
-    1: null,
-    2: null,
-    3: null,
-    4: null,
-    5: null,
-    6: null,
-    7: null,
-    8: null,
-    9: null,
-  });
+  // BUGFIX (#4): as respostas devem iniciar como `null` (não respondidas).
+  // Gera dinamicamente o mapa a partir da lista de perguntas, sem depender de IDs 1-9 hardcoded.
+  const createEmptyAnswers = useCallback((): Record<number, 'yes' | 'no' | null> => {
+    const empty: Record<number, 'yes' | 'no' | null> = {};
+    for (const q of questions) {
+      empty[q.id] = null;
+    }
+    return empty;
+  }, [questions]);
 
-  const [answers, setAnswers] = useState<Record<number, 'yes' | 'no' | null>>(createEmptyAnswers);
+  const [answers, setAnswers] = useState<Record<number, 'yes' | 'no' | null>>(() => {
+    const empty: Record<number, 'yes' | 'no' | null> = {};
+    for (const q of getQuestions()) {
+      empty[q.id] = null;
+    }
+    return empty;
+  });
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
@@ -252,7 +270,7 @@ export default function App() {
     }
   }, [isDarkMode]);
 
-  // Pré-carregamento em background de todas as ilustrações WebP para transições ultra-rápidas (0ms)
+  // #18: Pré-carregamento em background com cache Set (evita recriar Image repetidamente) e cleanup
   useEffect(() => {
     const imagesToPreload = [
       ...questions.map(q => q.image),
@@ -260,10 +278,23 @@ export default function App() {
       '/astronaut_confortavel.webp',
       '/file_0000000059b0820e9a6113802390edd4.webp',
     ];
+    const createdImages: HTMLImageElement[] = [];
+
     imagesToPreload.forEach(src => {
-      const img = new Image();
-      img.src = src;
+      if (!preloadedImageUrls.has(src)) {
+        preloadedImageUrls.add(src);
+        const img = new Image();
+        img.src = src;
+        createdImages.push(img);
+      }
     });
+
+    return () => {
+      createdImages.forEach(img => {
+        img.onload = null;
+        img.onerror = null;
+      });
+    };
   }, [questions]);
 
   const question = questions[currentStep - 1];
@@ -418,10 +449,9 @@ export default function App() {
     const transitionClass = isSwitchingToDark ? 'dark-transition' : 'light-transition';
     document.documentElement.classList.add(transitionClass);
 
+    // #21: Atualização nativa compatível com React 19 sem forçar flushSync síncrono
     const transition = (document as any).startViewTransition(() => {
-      flushSync(() => {
-        setIsDarkMode(prev => !prev);
-      });
+      setIsDarkMode(prev => !prev);
     });
 
     transition.finished.finally(() => {
@@ -465,7 +495,7 @@ export default function App() {
                 className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-[#0080ff] hover:bg-surface-container-low dark:hover:bg-[#1E2029] transition-all cursor-pointer"
                 title={`Alterar tripulante (${colaborador.nome})`}
               >
-                <span className="material-symbols-outlined text-[19px]">account_circle</span>
+                <User size={19} className="shrink-0" />
               </button>
             )}
           </div>
@@ -556,8 +586,8 @@ export default function App() {
               style={{ width: `${progressPercent}%` }}
             />
 
-            {/* 9 Clean Transparent Milestone Dots (Marcos) */}
-            <div className="absolute inset-0 pointer-events-none">
+            {/* 9 Clean Transparent Milestone Dots (Marcos) com safe-inset para não cortar bordas (#13) */}
+            <div className="absolute inset-y-0 left-1.5 right-1.5 sm:left-2 sm:right-2 pointer-events-none">
               {questions.map((q, idx) => {
                 const isPassed = !isColaboradorStep && (isTurmaStep || currentStep > idx + 1);
                 const isCurrent = !isColaboradorStep && !isTurmaStep && currentStep === idx + 1;
@@ -614,14 +644,14 @@ export default function App() {
         ) : (
           /* Readiness Card com Pergunta */
           <>
-            <div className={`w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 shadow-[0_4px_20px_rgba(32,59,139,0.10)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-[3px] sm:border-[4px] ${cardBorderClass} p-3 sm:p-5 flex-1 min-h-0 max-h-[500px] sm:max-h-[560px] justify-between`}>
+            <div className={`w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 shadow-[0_4px_20px_rgba(32,59,139,0.10)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-[3px] sm:border-[4px] ${cardBorderClass} p-3 sm:p-5 flex-1 min-h-0 max-h-[540px] sm:max-h-[580px] justify-between`}>
               
               <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col">
                 {/* Image Illustration */}
                 <div className="w-full flex-1 min-h-[90px] sm:min-h-[140px] max-h-[160px] sm:max-h-[220px] flex justify-center items-center py-1 sm:py-2 bg-surface-container-low/40 dark:bg-[#171922]/60 rounded-xl transition-colors duration-300">
                   <img 
                     alt={question.imageAlt} 
-                    className="h-full max-h-[120px] sm:max-h-[195px] w-auto mx-auto block object-contain transition-transform duration-300 hover:scale-105" 
+                    className="h-full max-h-[120px] sm:max-h-[195px] w-auto mx-auto block object-contain transition-all duration-300 hover:brightness-105" 
                     src={question.image} 
                     style={{ filter: isDarkMode ? 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.12))' }}
                   />
@@ -654,9 +684,11 @@ export default function App() {
                         : 'border-outline-variant dark:border-[#383d4a] text-on-surface dark:text-[#f7fafc] hover:bg-error-container/40 dark:hover:bg-[#ff5252]/15 hover:text-on-error-container dark:hover:text-[#ff7b7b] hover:border-error/60 dark:hover:border-[#ff5252] font-medium'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px] sm:text-[22px]" style={{ fontVariationSettings: selectedAnswer === 'yes' ? "'FILL' 1" : "'FILL' 0" }}>
-                    {isYesSafe ? 'check_circle' : 'cancel'}
-                  </span>
+                  {isYesSafe ? (
+                    <CheckCircle className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 shrink-0" />
+                  ) : (
+                    <CircleX className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 shrink-0" />
+                  )}
                   <span className="text-xs sm:text-base">Sim</span>
                 </button>
 
@@ -673,9 +705,11 @@ export default function App() {
                         : 'border-outline-variant dark:border-[#383d4a] text-on-surface dark:text-[#f7fafc] hover:bg-error-container/40 dark:hover:bg-[#ff5252]/15 hover:text-on-error-container dark:hover:text-[#ff7b7b] hover:border-error/60 dark:hover:border-[#ff5252] font-medium'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px] sm:text-[22px]" style={{ fontVariationSettings: selectedAnswer === 'no' ? "'FILL' 1" : "'FILL' 0" }}>
-                    {!isYesSafe ? 'check_circle' : 'cancel'}
-                  </span>
+                  {!isYesSafe ? (
+                    <CheckCircle className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 shrink-0" />
+                  ) : (
+                    <CircleX className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 shrink-0" />
+                  )}
                   <span className="text-xs sm:text-base">Não</span>
                 </button>
               </div>
@@ -683,43 +717,30 @@ export default function App() {
 
             {/* Navigation Controls (Anterior / Avançar) */}
             <div className="w-full flex justify-between items-center mt-2 sm:mt-4 shrink-0 px-0.5 sm:px-1">
-              {/* BUGFIX: Voltar e Avançar/Finalizar tinham larguras diferentes
-                  (cada botão só se ajustava ao tamanho do próprio texto).
-                  Agora os dois usam a mesma min-width, calculada pro texto
-                  "Avançar" (a referência pedida) — o Voltar cresce até
-                  bater com ela, e o "Finalizar" (mais longo, só aparece na
-                  última pergunta) ainda cresce à vontade além do mínimo,
-                  sem cortar. */}
+              {/* #11: Voltar assume estilo secundário neutro/outline */}
               <button 
                 onClick={handlePrev}
-                className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-2 sm:px-6 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 min-w-[88px] sm:min-w-[132px]"
+                className="bg-surface-container-high hover:bg-surface-container-highest active:bg-surface-container-highest dark:bg-[#252836] dark:hover:bg-[#2d3139] text-on-surface dark:text-[#f7fafc] border border-outline-variant/60 dark:border-[#383d4a] text-xs sm:text-sm font-bold py-2 sm:py-3 px-2 sm:px-6 rounded-full shadow-xs hover:shadow transition-all duration-200 active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 min-w-[88px] sm:min-w-[132px]"
               >
-                <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_back</span>
+                <ArrowLeft className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
                 <span>Voltar</span>
               </button>
 
               {/* Tag Desenvolvido por NEAR */}
-              {/* BUGFIX: em telas estreitas (mobile), essa pílula fica
-                  espremida entre os botões Voltar/Avançar. Antes o texto
-                  completo "DESENVOLVIDO POR NEAR" ficava cortado pelo
-                  truncate, sobrando só "DESENVOLVIDO POR N...". Em vez de
-                  abreviar o texto, reduzimos o padding dos botões ao lado
-                  e a fonte da pílula nas telas menores, pra frase completa
-                  sempre caber por inteiro. O truncate continua como rede
-                  de segurança só pra telas absurdamente estreitas. */}
               <div className="flex-1 flex justify-center px-1 min-w-0">
                 <div className="bg-surface-container-lowest dark:bg-[#1E2029] rounded-full px-1.5 sm:px-4 py-1 sm:py-1.5 shadow-sm text-center text-[7px] min-[375px]:text-[8px] min-[430px]:text-[9px] sm:text-xs text-on-surface-variant dark:text-[#a0aec0] transition-colors whitespace-nowrap border border-transparent dark:border-[#2d3139] truncate">
                   <span className="font-bold opacity-70 tracking-wider">DESENVOLVIDO POR NEAR</span>
                 </div>
               </div>
 
+              {/* #11: Avançar assume o destaque primário azul da marca */}
               <button 
                 onClick={handleNext} 
                 disabled={selectedAnswer === null || selectedAnswer === undefined}
-                className="bg-[#ff6b00] hover:bg-[#ea580c] active:bg-[#c2410c] dark:bg-[#ff7a00] dark:hover:bg-[#ea580c] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-2 sm:px-6 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0 min-w-[88px] sm:min-w-[132px]"
+                className="bg-[#0080ff] hover:bg-[#0066cc] active:bg-[#004fa3] dark:bg-[#0080ff] dark:hover:bg-[#0066cc] text-white text-xs sm:text-sm font-bold py-2 sm:py-3 px-2 sm:px-6 rounded-full shadow-sm hover:shadow transition-all duration-200 active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0 min-w-[88px] sm:min-w-[132px]"
               >
                 <span>{currentStep === questions.length ? 'Finalizar' : 'Avançar'}</span>
-                <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_forward</span>
+                <ArrowRight className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
               </button>
             </div>
           </>
@@ -734,10 +755,10 @@ export default function App() {
           aria-atomic="true"
           className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fadeIn max-w-[90%] sm:max-w-md"
         >
-          <span className="material-symbols-outlined" aria-hidden="true">error</span>
+          <AlertCircle size={18} className="shrink-0" aria-hidden="true" />
           <span className="text-sm font-medium">{errorMessage}</span>
-          <button onClick={() => setErrorMessage(null)} aria-label="Fechar mensagem de erro" className="ml-2 text-white/70 hover:text-white shrink-0">
-            <span className="material-symbols-outlined text-base" aria-hidden="true">close</span>
+          <button onClick={() => setErrorMessage(null)} aria-label="Fechar mensagem de erro" className="ml-2 text-white/70 hover:text-white shrink-0 cursor-pointer">
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
       )}

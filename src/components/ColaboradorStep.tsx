@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Fingerprint, CreditCard, Pencil, Search, X, ShieldCheck, CheckCircle, Check, AlertCircle, Rocket } from 'lucide-react';
 import { Colaborador, findColaboradorByMatricula } from '../config/colaboradores';
 import { findColaboradorInFirestore, getCachedColaborador } from '../services/firebase';
 
@@ -35,15 +36,20 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// Verifica se o navegador tem suporte a biometria nativa de hardware do dispositivo
-const isWebAuthnAvailable = async (): Promise<boolean> => {
-  if (typeof window === 'undefined') return false;
-  if (!window.PublicKeyCredential || !navigator.credentials) return false;
-  try {
-    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  } catch {
-    return false;
-  }
+// #20: Memoiza a checagem de suporte a hardware WebAuthn no nível de módulo para evitar chamadas de SO repetidas a cada mount
+let webAuthnAvailabilityPromise: Promise<boolean> | null = null;
+const isWebAuthnAvailable = (): Promise<boolean> => {
+  if (webAuthnAvailabilityPromise) return webAuthnAvailabilityPromise;
+  webAuthnAvailabilityPromise = (async () => {
+    if (typeof window === 'undefined') return false;
+    if (!window.PublicKeyCredential || !navigator.credentials) return false;
+    try {
+      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch {
+      return false;
+    }
+  })();
+  return webAuthnAvailabilityPromise;
 };
 
 // Registra a credencial no sensor biométrico nativo do aparelho
@@ -139,13 +145,18 @@ async function verifyHardwareBiometric(): Promise<boolean | string> {
   }
 }
 
-// Detecção de smartphone/tablet
+// Detecção precisa de smartphone/tablet (#27: evita falso positivo em laptops 2-em-1 touch)
 const isMobileDevice = (): boolean => {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || navigator.vendor || (window as unknown as { opera?: string }).opera || '';
   const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  return isMobileUA || (hasTouch && window.innerWidth <= 1024);
+  if (isMobileUA) return true;
+
+  // Laptops 2-em-1 com tela touch possuem hover e ponteiro fino (mouse/touchpad).
+  // Apenas consideramos mobile quando o ponteiro primário é touch (coarse) e não possui hover.
+  const isTouchPrimary = typeof window.matchMedia === 'function' && 
+    window.matchMedia('(pointer: coarse) and (hover: none)').matches;
+  return Boolean(isTouchPrimary && window.innerWidth <= 1024);
 };
 
 export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
@@ -408,7 +419,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
   const isNotFound = hasSearched && !isSearching && !searchedColaborador && matricula.trim().length > 0;
 
   return (
-    <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl flex flex-col relative transition-colors duration-300 shadow-[0_4px_24px_rgba(32,59,139,0.12)] dark:shadow-[0_4px_28px_rgba(0,0,0,0.5)] border-[3px] border-primary/20 dark:border-[#252836] p-3 sm:p-5 flex-1 min-h-0 max-h-[580px] overflow-hidden justify-between">
+    <div className="w-full bg-surface-container-lowest dark:bg-[#1E2029] rounded-2xl flex flex-col relative transition-colors duration-300 shadow-[0_4px_24px_rgba(32,59,139,0.12)] dark:shadow-[0_4px_28px_rgba(0,0,0,0.5)] border-[3px] border-primary/20 dark:border-[#252836] p-3 sm:p-5 flex-1 min-h-0 max-h-[540px] sm:max-h-[580px] overflow-hidden justify-between">
       
       {/* Área Rolável Interna para evitar qualquer corte de conteúdo */}
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col justify-start sm:justify-center py-0.5 sm:py-1 px-1">
@@ -422,9 +433,11 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
               className="w-full h-full object-contain drop-shadow"
             />
             <div className="absolute -bottom-1 -right-1 bg-[#0080ff] text-white p-0.5 sm:p-1 rounded-full shadow-md flex items-center justify-center">
-              <span className="material-symbols-outlined text-[11px] sm:text-[13px]">
-                {mode === 'biometric' ? 'fingerprint' : 'badge'}
-              </span>
+              {mode === 'biometric' ? (
+                <Fingerprint size={12} />
+              ) : (
+                <CreditCard size={12} />
+              )}
             </div>
           </div>
 
@@ -450,9 +463,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
               className="w-full max-w-[270px] py-3 sm:py-4 px-4 bg-gradient-to-br from-[#0080ff] to-[#0055cc] hover:from-[#0070e0] hover:to-[#0048b0] text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-1.5 sm:gap-2 shadow-lg hover:shadow-xl transition-transform active:scale-98 cursor-pointer"
             >
               <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
-                <span className="material-symbols-outlined text-[28px] sm:text-[36px]">
-                  fingerprint
-                </span>
+                <Fingerprint size={32} />
               </div>
               <span className="text-xs sm:text-sm md:text-base font-extrabold tracking-wide">
                 Toque para Entrar com Biometria
@@ -488,7 +499,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                 }}
                 className="text-xs font-semibold text-[#0080ff] dark:text-[#38bdf8] hover:underline flex items-center gap-1 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[14px]">edit</span>
+                <Pencil size={14} className="shrink-0" />
                 <span>Digitar outra matrícula</span>
               </button>
 
@@ -515,9 +526,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
               <form onSubmit={handleSearchOrSubmit} className="w-full flex flex-col items-center gap-1.5 sm:gap-2">
                 {/* Input de 8 dígitos */}
                 <div className="relative w-full max-w-[260px] flex items-center">
-                  <span className="absolute left-3 text-on-surface-variant dark:text-[#64748b] material-symbols-outlined text-[18px] sm:text-[20px] pointer-events-none">
-                    pin
-                  </span>
+                  <CreditCard size={18} className="absolute left-3 text-on-surface-variant dark:text-[#64748b] pointer-events-none" />
                   <input
                     type="text"
                     inputMode="numeric"
@@ -535,7 +544,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                       className="absolute right-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-1"
                       title="Limpar"
                     >
-                      <span className="material-symbols-outlined text-[16px] sm:text-[18px]">close</span>
+                      <X size={16} />
                     </button>
                   )}
                 </div>
@@ -550,7 +559,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                     <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined text-[16px] sm:text-[18px]">search</span>
+                      <Search size={16} className="shrink-0" />
                       <span>Buscar</span>
                     </>
                   )}
@@ -563,10 +572,10 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
               {searchedColaborador ? (
                 <div className="w-full p-2.5 sm:p-3 bg-[#dcfce7]/70 dark:bg-[#22c55e]/15 border-2 border-[#22c55e]/50 dark:border-[#22c55e]/40 rounded-xl flex flex-col items-center text-center transition-all animate-fadeIn shadow-xs">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#22c55e] text-white flex items-center justify-center mb-0.5 shadow-md">
-                    <span className="material-symbols-outlined text-[20px] sm:text-[22px]">verified_user</span>
+                    <ShieldCheck size={20} />
                   </div>
                   <div className="text-[9px] sm:text-[10px] font-bold text-[#166534] dark:text-[#4ade80] uppercase tracking-wider flex items-center justify-center gap-1">
-                    <span className="material-symbols-outlined text-[12px] sm:text-[13px]">check_circle</span>
+                    <CheckCircle size={12} />
                     COLABORADOR IDENTIFICADO
                   </div>
                   <div className="text-xs sm:text-sm md:text-base font-black text-[#0f172a] dark:text-[#f7fafc] mt-0.5 max-w-full truncate px-2">
@@ -584,21 +593,21 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
                         onClick={handleLinkBiometric}
                         className="w-full py-1 px-2.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 bg-[#16a34a] hover:bg-[#15803d] text-white transition-all cursor-pointer shadow-xs active:scale-95"
                       >
-                        <span className="material-symbols-outlined text-[14px]">fingerprint</span>
+                        <Fingerprint size={14} className="shrink-0" />
                         <span>Salvar Biometria neste Aparelho</span>
                       </button>
                     </div>
                   )}
                   {biometricFeedback && (
                     <div className="text-[10px] sm:text-[11px] font-bold text-[#15803d] dark:text-[#4ade80] animate-fadeIn flex items-center gap-1 mt-1">
-                      <span className="material-symbols-outlined text-[13px]">check</span>
+                      <Check size={13} className="shrink-0" />
                       <span>{biometricFeedback}</span>
                     </div>
                   )}
                 </div>
               ) : isNotFound ? (
                 <div className="w-full p-2.5 sm:p-3 bg-red-50 dark:bg-[#ff5252]/10 border border-red-200 dark:border-[#ff5252]/30 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-red-700 dark:text-[#ff7b7b] text-xs font-medium animate-fadeIn text-center">
-                  <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-red-500 shrink-0">error</span>
+                  <AlertCircle size={16} className="text-red-500 shrink-0" />
                   <span>Matrícula não localizada no sistema.</span>
                 </div>
               ) : null}
@@ -623,7 +632,7 @@ export const ColaboradorStep: React.FC<ColaboradorStepProps> = ({
             }`}
           >
             <span>Iniciar Checklist</span>
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">rocket_launch</span>
+            <Rocket size={16} className="shrink-0" />
           </button>
         </div>
       )}
