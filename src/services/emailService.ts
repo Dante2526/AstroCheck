@@ -244,7 +244,7 @@ export interface SendReportResult {
   success: boolean;
   message: string;
   isOfflineSaved?: boolean;
-  error?: any;
+  error?: unknown;
 }
 
 /**
@@ -342,23 +342,26 @@ export async function sendReadinessEmail(
           // Quando usamos mode: 'no-cors', a resposta é "opaque". 
           // Não podemos ler .ok nem .json(). Se não atirou erro (catch), assumimos sucesso.
           saveLocalBackup(data, 'sent');
-          console.log(`[AstroCheck] E-mail disparo solicitado com sucesso via Gmail para ${turmaConfig.gestorEmail}`);
+          if (import.meta.env.DEV) {
+            console.log(`[AstroCheck] E-mail disparo solicitado com sucesso via Gmail para ${turmaConfig.gestorEmail}`);
+          }
           return {
             success: true,
             message: `Relatório enviado com sucesso via Gmail para ${turmaConfig.gestorEmail} (${turmaConfig.label})!`,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.warn(`[AstroCheck] Tentativa ${attempt + 1} Google Apps Script falhou:`, error);
           if (attempt < retryCount) {
             await new Promise(resolve => setTimeout(resolve, 1200));
             continue;
           }
 
+          const errorMessage = error instanceof Error ? error.message : 'Erro de conexão';
           saveLocalBackup(data, 'pending');
           return {
             success: false,
             isOfflineSaved: true,
-            message: `Falha no envio via Gmail: ${error?.message || 'Erro de conexão'}. O relatório foi salvo no dispositivo.`,
+            message: `Falha no envio via Gmail: ${errorMessage}. O relatório foi salvo no dispositivo.`,
             error,
           };
         }

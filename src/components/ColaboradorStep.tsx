@@ -102,7 +102,7 @@ async function registerHardwareBiometric(matricula: string, nome: string): Promi
       return true;
     }
     return Boolean(credential);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.warn('[AstroCheck] Falha/cancelamento no cadastro biométrico:', err);
     // Retorna a string do erro para podermos debugar na tela
     return err instanceof Error ? `Erro: ${err.message}` : 'Erro desconhecido ao chamar sensor.';
@@ -139,7 +139,7 @@ async function verifyHardwareBiometric(): Promise<boolean | string> {
     });
 
     return Boolean(assertion);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.warn('[AstroCheck] Leitura da digital cancelada ou incorreta:', err);
     return err instanceof Error ? `Erro: ${err.message}` : 'Erro desconhecido ao chamar sensor.';
   }

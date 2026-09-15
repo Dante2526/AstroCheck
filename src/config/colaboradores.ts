@@ -15,7 +15,7 @@ export interface Colaborador {
 // em ambiente de desenvolvimento (`import.meta.env.DEV`). Antes ele também
 // funcionava em produção como fallback quando a matrícula não era achada no
 // Firestore, permitindo "autenticação" com um colaborador fictício.
-const isDevEnv = typeof import.meta !== 'undefined' && Boolean((import.meta as any)?.env?.DEV);
+const isDevEnv = typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV);
 
 export const COLABORADORES_MOCK: Colaborador[] = [
   ...(isDevEnv ? [{ matricula: '00000000', nome: 'Colaborador de Teste', turmaPadrao: 'A' as const }] : []),

@@ -416,8 +416,8 @@ export default function App() {
     setIsColaboradorStep(true);
   };
 
-  const handleToggleDarkMode = useCallback((e?: any) => {
-    if (!('startViewTransition' in document)) {
+  const handleToggleDarkMode = useCallback((e?: React.SyntheticEvent | unknown) => {
+    if (!document.startViewTransition) {
       setIsDarkMode(prev => !prev);
       return;
     }
@@ -427,11 +427,15 @@ export default function App() {
     let x = window.innerWidth / 2;
     let y = window.innerHeight / 2;
 
-    if (e && e.nativeEvent && typeof e.nativeEvent.clientX === 'number' && e.nativeEvent.clientX > 0) {
-      x = e.nativeEvent.clientX;
-      y = e.nativeEvent.clientY;
-    } else if (e && e.target instanceof Element) {
-      const targetEl = e.target.closest('.bb8-toggle') || e.target;
+    const mouseEvent = e && typeof e === 'object' && 'nativeEvent' in e ? (e as { nativeEvent: unknown }).nativeEvent : null;
+    if (mouseEvent && typeof mouseEvent === 'object' && 'clientX' in mouseEvent && typeof (mouseEvent as { clientX: unknown }).clientX === 'number') {
+      const me = mouseEvent as { clientX: number; clientY: number };
+      if (me.clientX > 0) {
+        x = me.clientX;
+        y = me.clientY;
+      }
+    } else if (e && typeof e === 'object' && 'target' in e && (e as { target: unknown }).target instanceof Element) {
+      const targetEl = ((e as { target: Element }).target).closest('.bb8-toggle') || (e as { target: Element }).target;
       const rect = targetEl.getBoundingClientRect();
       x = rect.left + rect.width / 2;
       y = rect.top + rect.height / 2;
@@ -457,11 +461,11 @@ export default function App() {
     document.documentElement.classList.add(transitionClass);
 
     // #21: Atualização nativa compatível com React 19 sem forçar flushSync síncrono
-    const transition = (document as any).startViewTransition(() => {
+    const transition = document.startViewTransition(() => {
       setIsDarkMode(prev => !prev);
     });
 
-    transition.finished.finally(() => {
+    transition?.finished.finally(() => {
       document.documentElement.classList.remove(transitionClass);
       document.documentElement.style.removeProperty('--toggle-x');
       document.documentElement.style.removeProperty('--toggle-y');

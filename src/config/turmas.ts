@@ -89,7 +89,7 @@ export const ALL_TURMA_KEYS: TurmaKey[] = ['A', 'B', 'C', 'D'];
 export const GOOGLE_SCRIPT_URL: string = 
   import.meta.env.VITE_GOOGLE_SCRIPT_URL || 
   import.meta.env.VITE_EMAIL_WEBHOOK_URL || 
-  (import.meta.env as any).GOOGLE_SCRIPT_URL || 
+  import.meta.env.GOOGLE_SCRIPT_URL || 
   '';
 
 

@@ -11,8 +11,9 @@ import {
   query, 
   where,
   limit 
-} from 'firebase/firestore';
+} from 'firebase/firestore/lite';
 import { getAuth, signInAnonymously, Auth, User } from 'firebase/auth';
+import type { ReadinessReportData } from './emailService';
 
 // NOTA DE SEGURANÇA (#28): Em aplicações SPA/PWA Firebase, a apiKey é um identificador
 // público do projeto no Google Cloud e não uma chave mestra de autenticação. O controle
@@ -197,7 +198,7 @@ export async function ensureFirebaseAuth(timeoutMs: number = 6000): Promise<User
   if (!auth) return null;
   if (auth.currentUser) return auth.currentUser;
 
-  let timer: any = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
   const authPromise = signInAnonymously(auth).then(cred => cred.user);
   const timeoutPromise = new Promise<null>((resolve) => {
     timer = setTimeout(() => {
@@ -222,7 +223,7 @@ if (typeof window !== 'undefined' && isFirebaseConfigured) {
   ensureFirebaseAuth().catch(() => {});
 }
 
-function extractColaboradorData(data: Record<string, any>, docId: string, colName: string): FirestoreColaborador {
+function extractColaboradorData(data: Record<string, unknown>, docId: string, colName: string): FirestoreColaborador {
   const isAdm = colName.toLowerCase() === 'administrators';
   return {
     matricula: String(data.matricula || data.Matricula || docId),
@@ -342,9 +343,13 @@ export async function findColaboradorInFirestore(
 /**
  * Salva o checklist do AstroCheck no Firestore na coleção da respectiva turma ou geral.
  */
-export async function saveChecklistToFirestore(reportData: any): Promise<{ success: boolean; id?: string; error?: any }> {
+export async function saveChecklistToFirestore(
+  reportData: ReadinessReportData | (Record<string, unknown> & { timestamp?: string })
+): Promise<{ success: boolean; id?: string; error?: unknown }> {
   if (!db || !isFirebaseConfigured) {
-    console.log('[AstroCheck] Firestore não configurado, pulando persistência remota.');
+    if (import.meta.env.DEV) {
+      console.log('[AstroCheck] Firestore não configurado, pulando persistência remota.');
+    }
     return { success: false, error: 'Firebase não configurado' };
   }
 
@@ -353,14 +358,16 @@ export async function saveChecklistToFirestore(reportData: any): Promise<{ succe
     
     // Salva na coleção 'registrosAstroCheck' com data única e consistente (#8)
     const colRef = collection(db, 'registrosAstroCheck');
-    const recordTimestamp = reportData.timestamp || new Date().toISOString();
+    const recordTimestamp = (reportData.timestamp as string | undefined) || new Date().toISOString();
     const docRef = await addDoc(colRef, {
       ...reportData,
       createdAt: recordTimestamp,
       timestamp: recordTimestamp,
     });
 
-    console.log('[AstroCheck] Relatório salvo no Firestore com ID:', docRef.id);
+    if (import.meta.env.DEV) {
+      console.log('[AstroCheck] Relatório salvo no Firestore com ID:', docRef.id);
+    }
     return { success: true, id: docRef.id };
   } catch (error) {
     console.error('[AstroCheck] Erro ao salvar no Firestore:', error);

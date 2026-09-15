@@ -2,7 +2,7 @@ import React from 'react';
 
 export interface BB8ToggleProps {
   isDarkMode: boolean;
-  onToggle: (e?: any) => void;
+  onToggle: (e?: React.SyntheticEvent | unknown) => void;
   size?: number;
   className?: string;
 }
