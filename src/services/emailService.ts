@@ -3,6 +3,7 @@ import {
   TURMAS, 
   GOOGLE_SCRIPT_URL
 } from '../config/turmas';
+import { fetchEmailSettings } from './firebase';
 
 export interface ReadinessAnswerItem {
   questionId: number;
@@ -277,11 +278,21 @@ export async function sendReadinessEmail(
   const html_content = buildReadinessEmailHtml(data);
   const text_content = buildReadinessEmailPlainText(data);
   const dateFormatted = new Date(data.timestamp).toLocaleString('pt-BR');
+  let gestorNome = turmaConfig.gestorNome;
+  let gestorEmail = turmaConfig.gestorEmail;
+
+  // Tenta buscar no banco de dados (prioridade sobre as variávais locais)
+  const dbSettings = await fetchEmailSettings();
+  if (dbSettings && dbSettings[data.turma]) {
+    gestorNome = dbSettings[data.turma].gestorNome || gestorNome;
+    gestorEmail = dbSettings[data.turma].gestorEmail || gestorEmail;
+  }
+
   const subject = `AstroCheck Prontidão — ${turmaConfig.label} — ${new Date(data.timestamp).toLocaleDateString('pt-BR')}`;
 
   const hasGoogleScript = Boolean(GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim().startsWith('http'));
 
-  if (!turmaConfig.gestorEmail) {
+  if (!gestorEmail) {
     return {
       success: false,
       message: 'Gestor da turma não configurado. Contate o TI.',
@@ -291,8 +302,8 @@ export async function sendReadinessEmail(
   // DISPARO VIA GOOGLE APPS SCRIPT (GMAIL OFICIAL - 500 A 1.500 ENVIOS/DIA GRATUITOS)
   if (hasGoogleScript) {
     const payload = {
-      to: turmaConfig.gestorEmail,
-      to_name: turmaConfig.gestorNome,
+      to: gestorEmail,
+      to_name: gestorNome,
       subject,
       html: html_content,
       text: text_content,

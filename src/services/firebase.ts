@@ -1,5 +1,5 @@
-// src/services/firebase.ts
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { TURMAS } from '../config/turmas';
 import { 
   getFirestore, 
   Firestore, 
@@ -7,6 +7,7 @@ import {
   addDoc, 
   getDocs, 
   getDoc,
+  setDoc,
   doc,
   query, 
   where,
@@ -49,6 +50,58 @@ export interface FirestoreColaborador {
   nome: string;
   cargo?: string;
   turma?: string;
+}
+
+export interface EmailSettings {
+  [key: string]: {
+    gestorNome: string;
+    gestorEmail: string;
+  };
+}
+
+let cachedEmailSettings: EmailSettings | null = null;
+
+export async function fetchEmailSettings(): Promise<EmailSettings | null> {
+  if (!db) return null;
+  if (cachedEmailSettings) return cachedEmailSettings;
+  try {
+    const docRef = doc(db, 'config', 'email_settings');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      cachedEmailSettings = snap.data() as EmailSettings;
+      return cachedEmailSettings;
+    }
+  } catch (error) {
+    console.error('[AstroCheck] Erro ao buscar config de emails:', error);
+  }
+  return null;
+}
+
+export async function saveEmailSettings(settings: EmailSettings): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const docRef = doc(db, 'config', 'email_settings');
+    await setDoc(docRef, settings, { merge: true });
+    cachedEmailSettings = settings;
+    return true;
+  } catch (error) {
+    console.error('[AstroCheck] Erro ao salvar config de emails:', error);
+    return false;
+  }
+}
+
+export async function initializeEmailSettings(): Promise<void> {
+  if (!db) return;
+  const currentSettings = await fetchEmailSettings();
+  if (!currentSettings) {
+    const defaultSettings: EmailSettings = {
+      A: { gestorNome: TURMAS.A.gestorNome, gestorEmail: TURMAS.A.gestorEmail },
+      B: { gestorNome: TURMAS.B.gestorNome, gestorEmail: TURMAS.B.gestorEmail },
+      C: { gestorNome: TURMAS.C.gestorNome, gestorEmail: TURMAS.C.gestorEmail },
+      D: { gestorNome: TURMAS.D.gestorNome, gestorEmail: TURMAS.D.gestorEmail },
+    };
+    await saveEmailSettings(defaultSettings);
+  }
 }
 
 const PRIMARY_COLLECTIONS = [

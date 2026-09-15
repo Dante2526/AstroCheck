@@ -8,9 +8,10 @@ import { flushSync } from 'react-dom';
 import { BB8Toggle } from './components/BB8Toggle';
 import { TurmaSelectionStep } from './components/TurmaSelectionStep';
 import { ColaboradorStep } from './components/ColaboradorStep';
+import { AdminPanel } from './components/AdminPanel';
 import { TurmaKey, TURMAS } from './config/turmas';
 import { sendReadinessEmail, ReadinessAnswerItem, ReadinessReportData } from './services/emailService';
-import { saveChecklistToFirestore } from './services/firebase';
+import { saveChecklistToFirestore, initializeEmailSettings } from './services/firebase';
 
 const LocomotiveSide = React.memo(({ size = 32 }: { size?: number }) => {
   const width = size * 1.5; // Torna a locomotiva 50% mais larga proporcionalmente à altura
@@ -139,6 +140,10 @@ export const getQuestions = (date: Date = new Date()) => [
 ];
 
 export default function App() {
+  if (typeof window !== 'undefined' && window.location.pathname === '/ADM') {
+    return <AdminPanel />;
+  }
+
   const questions = useMemo(() => getQuestions(), []);
   const [currentStep, setCurrentStep] = useState(1);
   const [isTurmaStep, setIsTurmaStep] = useState(false);
@@ -204,6 +209,10 @@ export default function App() {
       document.body.style.backgroundColor = '#f8f9fa';
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    initializeEmailSettings();
+  }, []);
 
   // Pré-carregamento em background de todas as ilustrações WebP para transições ultra-rápidas (0ms)
   useEffect(() => {
