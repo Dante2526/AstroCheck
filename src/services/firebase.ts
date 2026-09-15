@@ -180,11 +180,13 @@ export function getCachedColaborador(inputMatricula: string): FirestoreColaborad
   const digitsOnly = inputMatricula.trim().replace(/\D/g, '');
   if (!digitsOnly) return null;
   const cached = memoryGet(digitsOnly);
-  if (cached) return cached;
+  if (cached?.nome) return cached;
 
   const padded8 = digitsOnly.padStart(8, '0');
   const cachedPadded = memoryGet(padded8);
-  if (cachedPadded) return cachedPadded;return null;
+  if (cachedPadded?.nome) return cachedPadded;
+
+  return null;
 }
 
 /**

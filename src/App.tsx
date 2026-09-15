@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { User, CheckCircle, CircleX, ArrowLeft, ArrowRight, AlertCircle, X } from 'lucide-react';
 import { BB8Toggle } from './components/BB8Toggle';
 import { TurmaSelectionStep } from './components/TurmaSelectionStep';
@@ -184,16 +184,23 @@ export default function App() {
     }
   });
 
-  // REG-11: colaborador hidratado do localStorage nao e revalidado no Firestore
+  // REG-14: Manter ref atualizada do colaborador para evitar race conditions no setTimeout
+  const colaboradorRef = useRef(colaborador);
+  colaboradorRef.current = colaborador;
+
+  // REG-11, REG-13: colaborador hidratado ou alterado e revalidado no Firestore
   useEffect(() => {
-    if (!colaborador?.matricula) return;
+    const targetMatricula = colaborador?.matricula;
+    if (!targetMatricula) return;
     let cancelled = false;
 
-    // Revalidar colaborador no Firestore 5 segundos apos mount (nao bloqueia UI inicial)
+    // Revalidar colaborador no Firestore 5 segundos apos login/mount (nao bloqueia UI inicial)
     const timeoutId = setTimeout(async () => {
       try {
-        const fsColab = await findColaboradorInFirestore(colaborador.matricula);
+        const fsColab = await findColaboradorInFirestore(targetMatricula);
         if (cancelled) return;
+
+        const current = colaboradorRef.current;
 
         if (!fsColab) {
           // Colaborador nao existe mais no Firestore - deslogar
@@ -202,7 +209,7 @@ export default function App() {
           setColaborador(null);
           setIsColaboradorStep(true);
           setErrorMessage("Sua matrícula não está mais ativa. Contate o TI.");
-        } else if (fsColab.nome !== colaborador.nome || fsColab.cargo !== colaborador.cargo) {
+        } else if (current && (fsColab.nome !== current.nome || fsColab.cargo !== current.cargo)) {
           // Dados mudaram - atualizar
           const updated = {
             matricula: fsColab.matricula,
@@ -222,7 +229,7 @@ export default function App() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, []); // run once on mount
+  }, [colaborador?.matricula]); // REG-13: revalida quando a matrícula mudar ou for definida
   // BUGFIX (#4): as respostas devem iniciar como `null` (não respondidas).
   // Gera dinamicamente o mapa a partir da lista de perguntas, sem depender de IDs 1-9 hardcoded.
   const createEmptyAnswers = useCallback((): Record<number, 'yes' | 'no' | null> => {
