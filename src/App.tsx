@@ -141,7 +141,15 @@ export const getQuestions = (date: Date = new Date()) => [
   }
 ];
 
+import { MaintenanceScreen } from './components/MaintenanceScreen';
+
+const MAINTENANCE_MODE = true;
+
 export default function App() {
+  if (MAINTENANCE_MODE) {
+    return <MaintenanceScreen />;
+  }
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isTurmaStep, setIsTurmaStep] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<TurmaKey | null>(null);
